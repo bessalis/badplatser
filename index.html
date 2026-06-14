@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Badplatskollen">
+<meta name="theme-color" content="#0b3d5e">
+<title>Badplatskollen</title>
+<style>
+:root {
+  --bg: #f0f4f7;
+  --card: #ffffff;
+  --header-bg: #0b3d5e;
+  --header-fg: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: rgba(0,0,0,0.08);
+  --blue: #0b7ac4;
+  --blue-light: #dbeeff;
+  --blue-dark: #0b3d5e;
+  --ok: #16a34a;
+  --ok-bg: #dcfce7;
+  --ok-text: #14532d;
+  --warn: #d97706;
+  --warn-bg: #fef3c7;
+  --warn-text: #78350f;
+  --bad: #dc2626;
+  --bad-bg: #fee2e2;
+  --bad-text: #7f1d1d;
+  --unk: #6b7280;
+  --unk-bg: #f3f4f6;
+  --unk-text: #374151;
+  --r: 16px;
+  --rs: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --header-bg: #0b3d5e;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: rgba(255,255,255,0.07);
+    --blue-light: #0c2d4a;
+    --ok-bg: #052e16; --ok-text: #86efac;
+    --warn-bg: #1c1002; --warn-text: #fcd34d;
+    --bad-bg: #1c0505; --bad-text: #fca5a5;
+    --unk-bg: #1e293b; --unk-text: #94a3b8;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100%; overscroll-behavior-y: none; }
+
+/* HEADER */
+.hdr { background: var(--header-bg); padding: env(safe-area-inset-top,0) 0 0; position: sticky; top: 0; z-index: 20; }
+.hdr-inner { padding: 14px 16px 12px; display: flex; align-items: center; justify-content: space-between; }
+.hdr-title { color: #fff; font-size: 19px; font-weight: 700; letter-spacing: -0.4px; display: flex; align-items: center; gap: 7px; }
+.hdr-wave { font-size: 20px; }
+.hdr-sub { color: rgba(255,255,255,0.55); font-size: 11.5px; margin-top: 1px; }
+.hdr-refresh { background: rgba(255,255,255,0.15); border: none; color: #fff; width: 34px; height: 34px; border-radius: 50%; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+.hdr-refresh:active { background: rgba(255,255,255,0.3); }
+
+/* GPS BAR */
+.gps-bar { background: var(--header-bg); border-top: 1px solid rgba(255,255,255,0.1); padding: 0 16px 10px; display: flex; gap: 8px; }
+.btn-gps { flex: 1; height: 36px; border-radius: 99px; border: 1.5px solid rgba(255,255,255,0.35); background: transparent; color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: background 0.15s; }
+.btn-gps:active { background: rgba(255,255,255,0.1); }
+.btn-gps.active { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.6); }
+.gps-status { font-size: 11px; color: rgba(255,255,255,0.5); text-align: center; padding: 0 0 2px; }
+
+/* MAIN SCROLL */
+.scroll { overflow-y: auto; padding: 14px 14px 100px; }
+
+/* SECTION HEADERS */
+.section-hdr { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); padding: 0 4px 8px; margin-top: 6px; }
+
+/* FAV GRID */
+.fav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.fav-card { background: var(--card); border-radius: var(--r); border: 1px solid var(--border); padding: 12px 12px 10px; cursor: pointer; position: relative; min-height: 100px; transition: transform 0.1s; }
+.fav-card:active { transform: scale(0.96); }
+.fav-card.empty { border: 1.5px dashed var(--border); background: transparent; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13px; }
+.fav-card.empty .plus { font-size: 22px; opacity: 0.4; }
+.fav-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; margin-bottom: 6px; }
+.fav-name { font-size: 13px; font-weight: 700; line-height: 1.25; color: var(--text); }
+.fav-mun { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.fav-emoji { font-size: 22px; flex-shrink: 0; }
+.fav-temp { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--blue); margin: 4px 0 2px; }
+.fav-temp span { font-size: 13px; font-weight: 400; color: var(--muted); }
+.fav-status { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 99px; display: inline-block; }
+.fav-date { font-size: 10px; color: var(--muted); margin-top: 4px; }
+.fav-remove { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,0.08); border: none; color: var(--muted); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+.fav-card:hover .fav-remove { opacity: 1; }
+.fav-loading { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 5px; margin-top: 8px; }
+
+/* NEARBY LIST */
+.nearby-list { display: flex; flex-direction: column; gap: 8px; }
+.beach-card { background: var(--card); border-radius: var(--r); border: 1px solid var(--border); padding: 13px 14px; display: flex; gap: 12px; align-items: center; cursor: pointer; transition: transform 0.1s; }
+.beach-card:active { transform: scale(0.98); }
+.beach-left { flex: 1; min-width: 0; }
+.beach-name { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.beach-meta { font-size: 12px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 8px; }
+.beach-dist { background: var(--blue-light); color: var(--blue-dark); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+@media (prefers-color-scheme: dark) { .beach-dist { color: #60b8f0; } }
+.beach-status-row { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
+.beach-right { text-align: right; flex-shrink: 0; }
+.beach-temp { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--blue); }
+.beach-air { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.beach-emoji { font-size: 22px; }
+
+/* STATUS BADGE */
+.badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+.badge-ok { background: var(--ok-bg); color: var(--ok-text); }
+.badge-warn { background: var(--warn-bg); color: var(--warn-text); }
+.badge-bad { background: var(--bad-bg); color: var(--bad-text); }
+.badge-unk { background: var(--unk-bg); color: var(--unk-text); }
+
+/* EMPTY / STATES */
+.empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-icon { font-size: 44px; margin-bottom: 10px; }
+.empty p { font-size: 14px; line-height: 1.6; }
+.load-more { width: 100%; margin-top: 12px; padding: 13px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); font-size: 14px; color: var(--blue); cursor: pointer; font-weight: 500; }
+.load-more:active { opacity: 0.7; }
+
+/* BOTTOM SHEET / SEARCH */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 30; display: none; }
+.sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-radius: 20px 20px 0 0; z-index: 40; padding: 0 0 env(safe-area-inset-bottom,20px); max-height: 80vh; display: none; flex-direction: column; }
+.sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 14px; }
+.sheet-title { font-size: 16px; font-weight: 700; padding: 0 16px 12px; border-bottom: 1px solid var(--border); }
+.sheet-search { padding: 12px 16px; display: flex; gap: 8px; }
+.sheet-search input { flex: 1; height: 40px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: var(--rs); font-size: 15px; background: var(--bg); color: var(--text); outline: none; }
+.sheet-search input:focus { border-color: var(--blue); }
+.sheet-search button { height: 40px; padding: 0 14px; background: var(--blue); color: #fff; border: none; border-radius: var(--rs); font-size: 14px; font-weight: 600; cursor: pointer; }
+.sheet-results { overflow-y: auto; flex: 1; }
+.sheet-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.sheet-item:active { background: var(--bg); }
+.sheet-item-name { font-size: 15px; font-weight: 500; }
+.sheet-item-mun { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.sheet-item-dist { font-size: 13px; color: var(--blue); font-weight: 600; }
+
+/* SPINNER */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; width: 13px; height: 13px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; opacity: 0.5; vertical-align: middle; }
+
+/* FOOTER */
+.footer { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 8px 16px env(safe-area-inset-bottom,8px); display: flex; justify-content: center; align-items: center; font-size: 11px; color: var(--muted); gap: 10px; }
+.footer a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-inner">
+    <div>
+      <div class="hdr-title"><span class="hdr-wave">🏊</span> Badplatskollen</div>
+      <div class="hdr-sub" id="hdr-sub">Hämtar position…</div>
+    </div>
+    <button class="hdr-refresh" onclick="refreshAll()" title="Uppdatera">↻</button>
+  </div>
+  <div class="gps-bar">
+    <button class="btn-gps" id="btn-gps" onclick="getGPS()">📍 Närmast mig</button>
+  </div>
+  <div class="gps-status" id="gps-status"></div>
+</div>
+
+<div class="scroll" id="scroll">
+  <div id="fav-section">
+    <div class="section-hdr">Favoriter</div>
+    <div class="fav-grid" id="fav-grid"></div>
+  </div>
+  <div id="nearby-section">
+    <div class="section-hdr" id="nearby-hdr">Badplatser i närheten</div>
+    <div class="nearby-list" id="nearby-list">
+      <div class="empty"><div class="empty-icon">📍</div><p>Tryck på "Närmast mig"<br>för att se badplatser nära dig</p></div>
+    </div>
+    <button class="load-more" id="load-more-btn" onclick="loadMore()" style="display:none">Visa fler badplatser</button>
+  </div>
+</div>
+
+<!-- Search sheet -->
+<div class="overlay" id="overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Lägg till favorit</div>
+  <div class="sheet-search">
+    <input type="text" id="sheet-input" placeholder="Sök badplats…" autocomplete="off" />
+    <button onclick="doSearch()">Sök</button>
+  </div>
+  <div class="sheet-results" id="sheet-results">
+    <div style="padding:20px;text-align:center;color:var(--muted);font-size:14px;">Sök efter en badplats att lägga till som favorit</div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>Data: <a href="https://www.havochvatten.se/badplatser-och-badvatten.html" target="_blank">Havochvatten.se</a></span>
+  <span id="last-upd"></span>
+</div>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────────────────────
+const FAV_KEY   = 'badkollen_favs_v3';
+const FEAT_URL  = 'https://badplatsen.havochvatten.se/badplatsen/api/feature/';
+const PROF_URL  = 'https://badplatsen.havochvatten.se/badplatsen/api/testlocationprofile/';
+const NEARBY_COUNT = 10;
+const NEARBY_BATCH = 5; // how many to fetch status for at once
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+let allBeaches  = [];   // [{NUTSKOD, NAMN, KMN_NAMN, lat, lon}]
+let userLat     = null;
+let userLon     = null;
+let nearbyAll   = [];   // sorted by distance
+let nearbyShown = 0;
+let favs        = [];   // [{NUTSKOD, NAMN, KMN_NAMN, lat, lon, profile?}]
+let searchAll   = [];   // search results list
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+(async () => {
+  loadFavs();
+  renderFavGrid();
+  await loadAllBeaches();
+  getGPS();
+})();
+
+// ─── LOAD ALL BEACHES ────────────────────────────────────────────────────────
+async function loadAllBeaches() {
+  try {
+    const r = await fetch(FEAT_URL);
+    const json = await r.json();
+    allBeaches = json.features.map(f => ({
+      NUTSKOD: f.properties.NUTSKOD,
+      NAMN: f.properties.NAMN,
+      KMN_NAMN: f.properties.KMN_NAMN,
+      lat: f.geometry.coordinates[1],
+      lon: f.geometry.coordinates[0],
+    }));
+  } catch(e) {
+    console.error('loadAllBeaches', e);
+  }
+}
+
+// ─── GPS ────────────────────────────────────────────────────────────────────
+function getGPS() {
+  const btn = document.getElementById('btn-gps');
+  btn.classList.add('active');
+  btn.textContent = '📍 Hämtar position…';
+  document.getElementById('gps-status').textContent = '';
+
+  if (!navigator.geolocation) {
+    showGPSError('GPS ej tillgänglig i denna webbläsare');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      userLat = pos.coords.latitude;
+      userLon = pos.coords.longitude;
+      btn.textContent = '📍 Uppdatera position';
+      document.getElementById('hdr-sub').textContent = 'Sorterat efter avstånd';
+      buildNearby();
+    },
+    err => {
+      showGPSError('Tillåt plats för att se närmaste bad');
+      btn.textContent = '📍 Närmast mig';
+      btn.classList.remove('active');
+    },
+    { timeout: 12000, maximumAge: 60000 }
+  );
+}
+
+function showGPSError(msg) {
+  document.getElementById('gps-status').textContent = msg;
+  document.getElementById('hdr-sub').textContent = 'Ingen position';
+}
+
+// ─── NEARBY ─────────────────────────────────────────────────────────────────
+function haversine(la1,lo1,la2,lo2){
+  const R=6371, dL=(la2-la1)*Math.PI/180, dO=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function fmtDist(km){
+  if(km<1) return Math.round(km*1000)+' m';
+  if(km<10) return km.toFixed(1)+' km';
+  return Math.round(km)+' km';
+}
+
+async function buildNearby() {
+  if (!allBeaches.length || userLat===null) return;
+  nearbyAll = allBeaches
+    .map(b => ({ ...b, dist: haversine(userLat,userLon,b.lat,b.lon) }))
+    .sort((a,b) => a.dist - b.dist);
+  nearbyShown = 0;
+  document.getElementById('nearby-list').innerHTML = '';
+  document.getElementById('load-more-btn').style.display = 'none';
+  await showNextBatch();
+  // also refresh favs distances
+  renderFavGrid();
+}
+
+async function showNextBatch() {
+  const batch = nearbyAll.slice(nearbyShown, nearbyShown + NEARBY_COUNT);
+  nearbyShown += batch.length;
+  // render placeholders
+  batch.forEach(b => {
+    const el = document.createElement('div');
+    el.className = 'beach-card';
+    el.id = 'bc-' + b.NUTSKOD;
+    el.innerHTML = beachCardHTML(b, null);
+    el.onclick = () => toggleFav(b);
+    document.getElementById('nearby-list').appendChild(el);
+  });
+  // fetch status
+  await Promise.all(batch.map(b => fetchAndRenderBeach(b)));
+  document.getElementById('load-more-btn').style.display =
+    nearbyShown < nearbyAll.length ? '' : 'none';
+}
+
+function loadMore() { showNextBatch(); }
+
+function beachCardHTML(b, profile) {
+  const dist = b.dist != null ? `<span class="beach-dist">${fmtDist(b.dist)}</span>` : '';
+  const isFav = favs.some(f=>f.NUTSKOD===b.NUTSKOD);
+  const favStar = `<span style="font-size:14px;opacity:${isFav?1:0.25}">${isFav?'⭐':'☆'}</span>`;
+
+  if (!profile) {
+    return `
+      <div class="beach-left">
+        <div class="beach-name">${b.NAMN}</div>
+        <div class="beach-meta">${b.KMN_NAMN} ${dist}</div>
+        <div class="beach-status-row"><span class="badge badge-unk"><span class="spin"></span> hämtar…</span></div>
+      </div>
+      <div class="beach-right">${favStar}</div>`;
+  }
+
+  const emoji = statusEmoji(profile);
+  const temp = profile.waterTemp != null ? `${profile.waterTemp.toFixed(1)}°` : '–';
+  const airTemp = profile.airTemp != null ? `☁ ${profile.airTemp.toFixed(1)}°` : '';
+  const { cls, label } = statusBadge(profile);
+  const dateStr = profile.sampleDate ? `Prov ${profile.sampleDate}` : '';
+
+  return `
+    <div class="beach-left">
+      <div class="beach-name">${b.NAMN}</div>
+      <div class="beach-meta">${b.KMN_NAMN} ${dist}</div>
+      <div class="beach-status-row">
+        <span class="badge ${cls}">${label}</span>
+        ${dateStr ? `<span style="font-size:10px;color:var(--muted)">${dateStr}</span>` : ''}
+      </div>
+    </div>
+    <div class="beach-right">
+      <div class="beach-temp">${temp}<span style="font-size:12px;color:var(--muted)"> 🌊</span></div>
+      ${airTemp ? `<div class="beach-air">${airTemp}</div>` : ''}
+      <div style="font-size:22px;margin-top:3px">${emoji}</div>
+      <div style="font-size:13px;margin-top:2px;opacity:${isFav?1:0.3}">${isFav?'⭐':'☆'}</div>
+    </div>`;
+}
+
+function statusEmoji(p) {
+  if (!p) return '❓';
+  if (p.cyano || (p.algae && p.algaeType && p.algaeType.toLowerCase().includes('cyan'))) return '🦀';
+  if (p.algae === true) return '🦀';
+  if (p.cyano === false && p.algae === false) return '🐟';
+  if (p.badForbidden) return '⛔';
+  return '🐟';
+}
+
+function statusBadge(p) {
+  if (!p) return {cls:'badge-unk', label:'Okänd'};
+  if (p.badForbidden) return {cls:'badge-bad', label:'Badförbud'};
+  if (p.algae) return {cls:'badge-warn', label:'Blomning'};
+  if (p.latestSample) {
+    const r = p.latestSample.rating;
+    if (r===0) return {cls:'badge-bad', label:'Otjänligt'};
+    if (r===1) return {cls:'badge-warn', label:'Tjänligt med anm.'};
+    if (r===2||r===3) return {cls:'badge-ok', label:'Tjänligt ✓'};
+  }
+  return {cls:'badge-unk', label:'Ej provtaget'};
+}
+
+// ─── FETCH PROFILE ──────────────────────────────────────────────────────────
+async function fetchProfile(nutskod) {
+  try {
+    const r = await fetch(PROF_URL + nutskod);
+    const d = await r.json();
+
+    // Parse water temp from samples
+    let waterTemp = null, airTemp = null, sampleDate = null;
+    if (d.samples && d.samples.length > 0) {
+      const s = d.samples[0];
+      waterTemp = s.waterTemperature ?? null;
+      airTemp   = s.airTemperature ?? null;
+      if (s.sampleDateTime) {
+        const dt = new Date(s.sampleDateTime);
+        sampleDate = `${dt.getDate()}/${dt.getMonth()+1}`;
+      }
+    }
+    // Copernicus temp fallback
+    if (waterTemp == null && d.coperSmhi && d.coperSmhi.waterTemp != null) {
+      waterTemp = d.coperSmhi.waterTemp;
+    }
+
+    // Latest sample rating
+    let latestSample = null;
+    if (d.samples && d.samples.length > 0) {
+      latestSample = { rating: d.samples[0].rating };
+    }
+
+    return {
+      algae: d.algae ?? false,
+      cyano: d.cyano ?? false,
+      badForbidden: d.badForbidden ?? false,
+      waterTemp,
+      airTemp,
+      sampleDate,
+      latestSample,
+    };
+  } catch(e) {
+    return null;
+  }
+}
+
+async function fetchAndRenderBeach(b) {
+  const profile = await fetchProfile(b.NUTSKOD);
+  b._profile = profile;
+  const el = document.getElementById('bc-' + b.NUTSKOD);
+  if (el) {
+    el.innerHTML = beachCardHTML(b, profile);
+    el.onclick = () => toggleFav(b);
+  }
+}
+
+// ─── FAVORITES ───────────────────────────────────────────────────────────────
+function loadFavs() {
+  try { favs = JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { favs = []; }
+}
+function saveFavs() { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); }
+
+function toggleFav(b) {
+  const idx = favs.findIndex(f => f.NUTSKOD === b.NUTSKOD);
+  if (idx >= 0) {
+    favs.splice(idx, 1);
+  } else {
+    if (favs.length >= 4) {
+      alert('Max 4 favoriter. Ta bort en befintlig först.');
+      return;
+    }
+    favs.push({ ...b, _profile: b._profile || null });
+  }
+  saveFavs();
+  renderFavGrid();
+  // re-render nearby cards to update star
+  nearbyAll.slice(0, nearbyShown).forEach(nb => {
+    const el = document.getElementById('bc-' + nb.NUTSKOD);
+    if (el) { el.innerHTML = beachCardHTML(nb, nb._profile||null); el.onclick = () => toggleFav(nb); }
+  });
+}
+
+function renderFavGrid() {
+  const grid = document.getElementById('fav-grid');
+  const slots = [];
+  for (let i=0; i<4; i++) {
+    const f = favs[i];
+    if (f) slots.push(favCardHTML(f, i));
+    else slots.push(emptyFavHTML(i));
+  }
+  grid.innerHTML = slots.join('');
+}
+
+function favCardHTML(f, idx) {
+  const p = f._profile || null;
+  const emoji = statusEmoji(p);
+  const temp = p && p.waterTemp != null ? `${p.waterTemp.toFixed(1)}` : null;
+  const { cls, label } = p ? statusBadge(p) : {cls:'badge-unk',label:'–'};
+  const dateStr = p && p.sampleDate ? `Prov ${p.sampleDate}` : '';
+  const distStr = (userLat!==null && f.lat) ? fmtDist(haversine(userLat,userLon,f.lat,f.lon)) : '';
+  return `
+  <div class="fav-card" onclick="">
+    <button class="fav-remove" onclick="event.stopPropagation();removeFav(${idx})">×</button>
+    <div class="fav-top">
+      <div>
+        <div class="fav-name">${f.NAMN}</div>
+        <div class="fav-mun">${f.KMN_NAMN}${distStr?' · '+distStr:''}</div>
+      </div>
+      <div class="fav-emoji">${emoji}</div>
+    </div>
+    ${temp
+      ? `<div class="fav-temp">${temp}<span>°</span></div>`
+      : `<div class="fav-loading"><span class="spin"></span> hämtar</div>`}
+    <span class="fav-status badge ${cls}">${label}</span>
+    <div class="fav-date">${dateStr}</div>
+  </div>`;
+}
+
+function emptyFavHTML(idx) {
+  return `<div class="fav-card empty" onclick="openSheet()">
+    <div class="plus">+</div>
+    <div>Lägg till favorit</div>
+  </div>`;
+}
+
+function removeFav(idx) {
+  favs.splice(idx, 1);
+  saveFavs();
+  renderFavGrid();
+}
+
+// ─── REFRESH ALL ─────────────────────────────────────────────────────────────
+async function refreshAll() {
+  const icon = document.querySelector('.hdr-refresh');
+  icon.style.animation = 'spin 0.7s linear infinite';
+  // Refresh favs
+  await Promise.all(favs.map(async (f,i) => {
+    favs[i]._profile = await fetchProfile(f.NUTSKOD);
+  }));
+  saveFavs();
+  renderFavGrid();
+  // Refresh shown nearby
+  const shown = nearbyAll.slice(0, nearbyShown);
+  await Promise.all(shown.map(async b => {
+    b._profile = await fetchProfile(b.NUTSKOD);
+    const el = document.getElementById('bc-' + b.NUTSKOD);
+    if (el) { el.innerHTML = beachCardHTML(b, b._profile); el.onclick = () => toggleFav(b); }
+  }));
+  icon.style.animation = '';
+  const now = new Date();
+  document.getElementById('last-upd').textContent =
+    `Uppdaterad ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+}
+
+// ─── SEARCH SHEET ────────────────────────────────────────────────────────────
+function openSheet() {
+  document.getElementById('overlay').style.display = 'block';
+  const sh = document.getElementById('sheet');
+  sh.style.display = 'flex';
+  document.getElementById('sheet-input').value = '';
+  document.getElementById('sheet-results').innerHTML =
+    '<div style="padding:20px;text-align:center;color:var(--muted);font-size:14px;">Sök efter en badplats att lägga till som favorit</div>';
+  setTimeout(()=>document.getElementById('sheet-input').focus(), 100);
+}
+function closeSheet() {
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('sheet').style.display = 'none';
+}
+
+function doSearch() {
+  const q = document.getElementById('sheet-input').value.toLowerCase().trim();
+  if (!q) return;
+  const results = allBeaches.filter(b =>
+    b.NAMN.toLowerCase().includes(q) || b.KMN_NAMN.toLowerCase().includes(q)
+  ).slice(0, 30);
+
+  if (userLat !== null) {
+    results.forEach(b => { b.dist = haversine(userLat,userLon,b.lat,b.lon); });
+    results.sort((a,b) => a.dist - b.dist);
+  }
+
+  const el = document.getElementById('sheet-results');
+  if (!results.length) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:14px;">Inga resultat</div>';
+    return;
+  }
+  el.innerHTML = results.map(b => {
+    const dist = b.dist != null ? `<span class="sheet-item-dist">${fmtDist(b.dist)}</span>` : '';
+    const isFav = favs.some(f=>f.NUTSKOD===b.NUTSKOD);
+    return `<div class="sheet-item" onclick="addFavFromSearch('${b.NUTSKOD}')">
+      <div>
+        <div class="sheet-item-name">${b.NAMN} ${isFav?'⭐':''}</div>
+        <div class="sheet-item-mun">${b.KMN_NAMN}</div>
+      </div>
+      ${dist}
+    </div>`;
+  }).join('');
+}
+
+async function addFavFromSearch(nutskod) {
+  const b = allBeaches.find(x=>x.NUTSKOD===nutskod);
+  if (!b) return;
+  const existing = favs.findIndex(f=>f.NUTSKOD===nutskod);
+  if (existing>=0) { closeSheet(); return; }
+  if (favs.length >= 4) { alert('Max 4 favoriter. Ta bort en befintlig först.'); return; }
+  b.dist = userLat!==null ? haversine(userLat,userLon,b.lat,b.lon) : null;
+  favs.push({ ...b, _profile: null });
+  saveFavs();
+  renderFavGrid();
+  closeSheet();
+  // Fetch profile
+  const idx = favs.findIndex(f=>f.NUTSKOD===nutskod);
+  favs[idx]._profile = await fetchProfile(nutskod);
+  saveFavs();
+  renderFavGrid();
+}
+
+document.getElementById('sheet-input').addEventListener('keydown', e => {
+  if (e.key==='Enter') doSearch();
+});
+</script>
+</body>
+</html>
