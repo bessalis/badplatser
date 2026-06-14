@@ -502,30 +502,59 @@ async function fetchProfile(id) {
   try {
     const r = await fetch(PROF_URL + id);
     const d = await r.json();
-    let waterTemp = null, airTemp = null, sampleDate = null, latestRating = null;
-    if (d.samples?.length > 0) {
-      const s = d.samples[0];
-      waterTemp = s.waterTemperature ?? null;
-      airTemp   = s.airTemperature ?? null;
-      latestRating = s.rating ?? null;
-      if (s.sampleDateTime) {
-        const dt = new Date(s.sampleDateTime);
-        sampleDate = `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`;
-      }
+
+    // Water temp: try Copernicus first (coastal), then SMHI forecast
+    let waterTemp = null;
+    if (Array.isArray(d.coperSmhi) && d.coperSmhi.length > 0) {
+      // coperSmhi[0] has smhiTemp (air) and copernicusData (water, sometimes "-")
+      const c = d.coperSmhi[0];
+      if (c.copernicusData && c.copernicusData !== '-') waterTemp = parseFloat(c.copernicusData);
     }
-    if (waterTemp == null && d.coperSmhi?.waterTemp != null) waterTemp = d.coperSmhi.waterTemp;
+
+    // Air temp: SMHI smhiTemp from the midday forecast entry (measHour 12)
+    let airTemp = null;
+    if (Array.isArray(d.coperSmhi) && d.coperSmhi.length > 0) {
+      const midday = d.coperSmhi.find(c => c.measHour === '12') || d.coperSmhi[0];
+      if (midday?.smhiTemp) airTemp = parseFloat(midday.smhiTemp);
+    }
+
+    // Classification history (sorted newest first)
+    const classifications = (d.classification || []).sort((a,b) => b.classificationYear - a.classificationYear);
+    const latestClass = classifications[0] || null;
+
+    // Map classification rating to our status key
+    // HaV: 1=Utmärkt, 2=Bra, 3=Tillfredställande, 4=Dålig
+    let latestRating = null;
+    if (latestClass) {
+      if (latestClass.rating === 1 || latestClass.rating === 2) latestRating = 2; // ok
+      else if (latestClass.rating === 3) latestRating = 1; // warn
+      else if (latestClass.rating === 4) latestRating = 0; // bad
+    }
+
+    // Badsäsong dates
+    let seasonStart = null, seasonEnd = null;
+    if (d.bathingSeasonStart) seasonStart = new Date(d.bathingSeasonStart);
+    if (d.bathingSeasonEnd) seasonEnd = new Date(d.bathingSeasonEnd);
+
     const profile = {
       algae: d.algae ?? false,
       cyano: d.cyano ?? false,
       badForbidden: d.badForbidden ?? false,
-      waterTemp, airTemp, sampleDate, latestRating,
+      waterTemp,
+      airTemp,
+      sampleDate: null, // not available in this endpoint
+      latestRating,
+      latestClass,
+      classifications,
+      seasonStart,
+      seasonEnd,
       description: d.description || d.summary || '',
-      classification: d.classification?.[0] || null,
       euType: d.euType ?? false,
+      showWaterTempForecast: d.showWaterTempForecast ?? false,
     };
     beachProfiles[id] = profile;
     return profile;
-  } catch { return null; }
+  } catch(e) { console.error('fetchProfile', e); return null; }
 }
 
 async function fetchAndUpdateCard(b) {
@@ -574,69 +603,112 @@ function renderDetail(b) {
   const p = b.profile;
   const si = getStatusInfo(p);
 
-  // Banner
   document.getElementById('detail-banner').className = `detail-status-banner ${si.bg}`;
   document.getElementById('detail-banner').innerHTML = `
     <span class="detail-status-dot ${si.dot}"></span>
     <div>
-      <div class="detail-status-label ${`s-${si.key}`}">${si.label}</div>
+      <div class="detail-status-label s-${si.key}">${si.label}</div>
       <div class="detail-status-sub">${si.sub}</div>
     </div>`;
 
-  // Grid
   const grid = document.getElementById('detail-grid');
+  const cw   = document.getElementById('detail-classification-wrap');
+
   if (!p) {
     grid.innerHTML = `<div class="detail-tile" style="grid-column:1/-1;text-align:center;color:var(--text-muted)"><span class="spin"></span> Hämtar förhållanden…</div>`;
-  } else {
-    const wt = p.waterTemp != null ? `${p.waterTemp.toFixed(1)}<span>°C</span>` : `–<span></span>`;
-    const at = p.airTemp != null ? `${p.airTemp.toFixed(1)}<span>°C</span>` : `–<span></span>`;
-    const alg = p.algae ? '🦀 Ja' : '🐟 Nej';
-    const algColor = p.algae ? 'var(--warn)' : 'var(--ok)';
-    grid.innerHTML = `
-      <div class="detail-tile">
-        <div class="detail-tile-icon">🌊</div>
-        <div class="detail-tile-label">Vattentemperatur</div>
-        <div class="detail-tile-val">${wt}</div>
-      </div>
-      <div class="detail-tile">
-        <div class="detail-tile-icon">🌤</div>
-        <div class="detail-tile-label">Lufttemperatur</div>
-        <div class="detail-tile-val">${at}</div>
-      </div>
-      <div class="detail-tile" style="grid-column:1/-1">
-        <div class="detail-tile-icon">🔬</div>
-        <div class="detail-tile-label">Algblomning</div>
-        <div class="detail-tile-val" style="font-size:20px;font-family:var(--font-sans);color:${algColor}">${alg}</div>
-      </div>`;
-
-    // Classification
-    const cw = document.getElementById('detail-classification-wrap');
-    if (p.classification) {
-      const ratingLabels = ['','Utmärkt','Bra kvalitet','Tillfredsställande','Dålig kvalitet'];
-      cw.innerHTML = `
-        <div class="detail-classification">
-          <div>
-            <div class="detail-class-label">EU-klassificering ${p.classification.classificationYear}</div>
-            <div class="detail-class-val">${ratingLabels[p.classification.rating] || '–'}</div>
-          </div>
-          ${p.euType ? '<span style="font-size:12px;background:var(--ocean-light);color:var(--ocean);padding:4px 10px;border-radius:99px;font-weight:600">EU Badvatten</span>' : ''}
-        </div>`;
-    } else { cw.innerHTML = ''; }
-
-    // About
-    const aboutTitle = document.getElementById('detail-about-title');
-    const aboutEl = document.getElementById('detail-about');
-    if (p.description) {
-      aboutTitle.style.display = '';
-      aboutEl.textContent = p.description;
-    } else {
-      aboutTitle.style.display = 'none';
-      aboutEl.textContent = '';
-    }
-    // Sample date
-    document.getElementById('detail-sample-date').innerHTML =
-      p.sampleDate ? `📅 Senaste prov: ${p.sampleDate}` : '';
+    cw.innerHTML = '';
+    return;
   }
+
+  const wt = p.waterTemp != null
+    ? `${p.waterTemp.toFixed(1)}<span>°C</span>`
+    : `<span style="font-size:15px;font-family:var(--font-sans)">Ej tillgänglig</span>`;
+  const at = p.airTemp != null
+    ? `${p.airTemp.toFixed(1)}<span>°C</span>`
+    : `<span style="font-size:15px;font-family:var(--font-sans)">Ej tillgänglig</span>`;
+  const algColor = p.algae ? 'var(--warn)' : 'var(--ok)';
+  const alg = p.algae ? '🦀 Blomning' : '🐟 Ingen blomning';
+
+  grid.innerHTML = `
+    <div class="detail-tile">
+      <div class="detail-tile-icon">🌊</div>
+      <div class="detail-tile-label">Vattentemperatur</div>
+      <div class="detail-tile-val">${wt}</div>
+      ${p.waterTemp != null ? '<div style="font-size:10px;color:var(--text-muted);margin-top:3px">Copernicus/SMHI</div>' : ''}
+    </div>
+    <div class="detail-tile">
+      <div class="detail-tile-icon">🌤</div>
+      <div class="detail-tile-label">Lufttemperatur idag</div>
+      <div class="detail-tile-val">${at}</div>
+      ${p.airTemp != null ? '<div style="font-size:10px;color:var(--text-muted);margin-top:3px">SMHI-prognos</div>' : ''}
+    </div>
+    <div class="detail-tile" style="grid-column:1/-1">
+      <div class="detail-tile-icon">🔬</div>
+      <div class="detail-tile-label">Algblomning</div>
+      <div class="detail-tile-val" style="font-size:20px;font-family:var(--font-sans);color:${algColor}">${alg}</div>
+    </div>`;
+
+  // Classification history table
+  const ratingLabel = r => (['','Utmärkt','Bra','Tillfredställande','Dålig'][r] || '–');
+  const ratingDotCls = r => r===1||r===2 ? 'dot-ok' : r===3 ? 'dot-warn' : r===4 ? 'dot-bad' : 'dot-unk';
+
+  let cwHtml = '';
+  if (p.classifications && p.classifications.length > 0) {
+    const rows = p.classifications.slice(0,5).map(c => `
+      <tr>
+        <td style="padding:9px 0;font-size:14px;color:var(--text-mid);border-bottom:1px solid var(--border)">${c.classificationYear}</td>
+        <td style="padding:9px 0;border-bottom:1px solid var(--border)">
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600">
+            <span style="width:8px;height:8px;border-radius:50%;display:inline-block" class="${ratingDotCls(c.rating)}"></span>
+            ${ratingLabel(c.rating)}
+          </span>
+        </td>
+      </tr>`).join('');
+
+    cwHtml += `
+      <div style="margin-top:16px">
+        <div class="detail-section-title" style="margin-bottom:8px">Badvattenkvalitet per år</div>
+        <div style="background:var(--card);border-radius:14px;border:1px solid var(--border);overflow:hidden">
+          <div style="padding:12px 16px 4px">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-muted);padding-bottom:8px;border-bottom:1px solid var(--border)">År</th>
+                  <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-muted);padding-bottom:8px;border-bottom:1px solid var(--border)">Klassificering</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+          ${p.euType ? `<div style="padding:10px 16px;background:var(--ocean-light);display:flex;align-items:center;gap:6px">
+            <span style="font-size:12px;color:var(--ocean);font-weight:600">🇪🇺 EU Badvatten</span>
+          </div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  // Season
+  if (p.seasonStart && p.seasonEnd) {
+    const fmt = d => `${d.getDate()}/${d.getMonth()+1}`;
+    cwHtml += `<div style="margin-top:10px;padding:11px 14px;background:var(--card);border-radius:12px;border:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:13px">
+      <span>🏖️</span>
+      <span style="color:var(--text-mid)">Badsäsong <strong>${fmt(p.seasonStart)} – ${fmt(p.seasonEnd)}</strong></span>
+    </div>`;
+  }
+
+  cw.innerHTML = cwHtml;
+
+  // About
+  const aboutTitle = document.getElementById('detail-about-title');
+  const aboutEl    = document.getElementById('detail-about');
+  if (p.description) {
+    aboutTitle.style.display = '';
+    aboutEl.textContent = p.description;
+  } else {
+    aboutTitle.style.display = 'none';
+    aboutEl.textContent = '';
+  }
+  document.getElementById('detail-sample-date').innerHTML = '';
 }
 
 function closeDetail() {
