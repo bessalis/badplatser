@@ -313,6 +313,7 @@ const PAGE_SIZE = 10;
 let activeFilter = 'all';
 let searchQuery = '';
 let currentDetail = null;
+let previousScreen = 'search';
 let favIds = [];
 let leafletMap = null, mapInitialized = false;
 let beachProfiles = {}; // cache
@@ -322,6 +323,8 @@ let beachProfiles = {}; // cache
   setTodayDate();
   loadFavIds();
   await loadAllBeaches();
+  // If map tab was already open when beaches finished loading, populate it
+  if (mapInitialized) addMapMarkers();
   getGPS();
 })();
 
@@ -551,14 +554,19 @@ document.getElementById('search-input').addEventListener('input', e => {
 // ══════════════════════════ DETAIL
 function openDetail(b) {
   currentDetail = b;
-  // Set up hero
+  // Remember which screen we came from
+  const active = document.querySelector('.screen:not(.hidden)');
+  if (active) previousScreen = active.id.replace('screen-', '');
+
   document.getElementById('detail-hero-img').className = 'detail-hero-img ' + b.bgClass;
   document.getElementById('detail-name').textContent = b.name;
   const dist = b.dist != null ? ` · ${fmtDist(b.dist)}` : '';
   document.getElementById('detail-loc').innerHTML = `📍 ${b.municipality}${dist}`;
   document.getElementById('detail-fav-btn').textContent = favIds.includes(b.id) ? '💙' : '🤍';
   renderDetail(b);
+  // Show detail on top – don't hide other screens so map stays alive underneath
   document.getElementById('screen-detail').classList.remove('hidden');
+  document.getElementById('screen-detail').style.zIndex = 15;
   if (b.profile === null) fetchAndUpdateCard(b);
 }
 
@@ -633,7 +641,22 @@ function renderDetail(b) {
 
 function closeDetail() {
   document.getElementById('screen-detail').classList.add('hidden');
+  document.getElementById('screen-detail').style.zIndex = '';
   currentDetail = null;
+  // Make sure the right screen is visible
+  const prev = document.getElementById('screen-' + previousScreen);
+  if (prev) {
+    document.querySelectorAll('.screen').forEach(s => {
+      if (s.id !== 'screen-detail') s.classList.add('hidden');
+    });
+    prev.classList.remove('hidden');
+    // Sync nav highlight
+    const navMap = { search: 0, map: 1, favs: 2 };
+    const idx = navMap[previousScreen] ?? 0;
+    document.querySelectorAll('.nav-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+    // Re-trigger map resize in case it got confused
+    if (previousScreen === 'map' && leafletMap) setTimeout(() => leafletMap.invalidateSize(), 50);
+  }
 }
 
 function toggleFavDetail() {
@@ -755,28 +778,31 @@ function initMap() {
     attribution: '© OpenStreetMap © CARTO', maxZoom: 19
   }).addTo(leafletMap);
 
+  if (userLat !== null) leafletMap.setView([userLat, userLon], 10);
+
+  // Add markers – beaches may already be loaded
+  if (allBeaches.length > 0) addMapMarkers();
+  // else addMapMarkers() will be called from init after loadAllBeaches
+}
+
+function addMapMarkers() {
+  if (!leafletMap) return;
   allBeaches.forEach(b => {
+    if (mapMarkers[b.id]) return; // already added
     const marker = L.marker([b.lat, b.lon], { icon: tempMarkerIcon(b) }).addTo(leafletMap);
     mapMarkers[b.id] = marker;
 
     marker.on('click', async () => {
-      // Open popup with whatever we have, then fetch if needed
       marker.bindPopup(popupHTML(b), { maxWidth: 240 }).openPopup();
       if (!b.profile) {
         b.profile = await fetchProfile(b.id);
-        // Update marker icon with temp
         marker.setIcon(tempMarkerIcon(b));
-        // Refresh popup if still open
-        if (marker.isPopupOpen()) {
-          marker.setPopupContent(popupHTML(b));
-        }
+        if (marker.isPopupOpen()) marker.setPopupContent(popupHTML(b));
         refreshCard(b);
         updateFavChips();
       }
     });
   });
-
-  if (userLat !== null) leafletMap.setView([userLat, userLon], 10);
 }
 
 function refreshMapMarker(b) {
