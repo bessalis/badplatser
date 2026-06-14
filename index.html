@@ -533,26 +533,34 @@ function loadMore() {
 function bcardHTML(b) {
   const si = getStatusInfo(b.profile);
   const isFav = favIds.includes(b.id);
-  const dist = b.dist != null ? `· ${fmtDist(b.dist)}` : '';
-  const temp = b.profile?.waterTemp != null
-    ? `🌊 ${b.profile.waterTemp.toFixed(1)}°`
-    : (b.profile ? '' : '');
-  const algaeEmoji = b.profile ? (b.profile.algae ? '🦀 Blomning' : (b.profile.cyano===false ? '🐟 Ingen blomning' : '')) : '';
+  const dist = b.dist != null ? ` · ${fmtDist(b.dist)}` : '';
+  const waterTemp = b.profile?.waterTemp != null;
+  const tempStr = waterTemp ? `${b.profile.waterTemp.toFixed(1)}°` : null;
+  const algaeEmoji = b.profile
+    ? (b.profile.algae ? '🦀' : '🐟')
+    : '';
+  const algaeText = b.profile
+    ? (b.profile.algae ? 'Blomning' : 'Ingen blomning')
+    : '';
+
   return `
     <div class="bcard-img-inner ${b.bgClass}">
       <div class="bcard-status-pill">
         <span class="pill-dot ${si.dot}"></span>
-        <span class="${'s-'+si.key}" style="font-size:12px;font-weight:700">${si.label === 'Hämtar…' ? '<span class="spin"></span>' : si.label}</span>
+        <span class="s-${si.key}" style="font-size:12px;font-weight:700">${si.label === 'Hämtar…' ? '<span class="spin"></span>' : si.label}</span>
       </div>
+      ${tempStr ? `<div style="position:absolute;bottom:12px;left:12px;z-index:2;background:rgba(255,255,255,0.92);backdrop-filter:blur(8px);border-radius:99px;padding:5px 11px;font-size:15px;font-weight:700;color:#1a4a5e;display:flex;align-items:center;gap:5px">
+        🌊 ${tempStr}
+      </div>` : ''}
       <button class="bcard-fav" onclick="event.stopPropagation();toggleFav('${b.id}')">${isFav ? '💙' : '🤍'}</button>
     </div>
     <div class="bcard-body">
       <div class="bcard-name">${b.name}</div>
-      <div class="bcard-loc">${b.municipality}${dist ? ' · ' + fmtDist(b.dist) : ''}</div>
-      <div class="bcard-meta">
-        ${temp ? `<span class="bcard-chip"><span class="bcard-chip-icon">🌡</span>${temp}</span>` : ''}
-        ${algaeEmoji ? `<span class="bcard-chip">${algaeEmoji}</span>` : ''}
-        ${si.qual ? `<span class="quality-badge ${si.bg}">${si.qual}</span>` : ''}
+      <div class="bcard-loc">${b.municipality}${dist}</div>
+      <div class="bcard-meta" style="margin-top:8px">
+        ${algaeEmoji ? `<span class="bcard-chip">${algaeEmoji} ${algaeText}</span>` : ''}
+        ${b.profile?.sampleDate ? `<span class="bcard-chip" style="color:var(--text-muted);font-size:11px">prov ${b.profile.sampleDate.slice(0,5)}</span>` : ''}
+        ${si.qual && si.key !== 'ok' ? `<span class="quality-badge ${si.bg}" style="margin-left:auto">${si.qual}</span>` : ''}
       </div>
     </div>`;
 }
@@ -624,7 +632,15 @@ async function fetchProfile(id) {
 }
 
 async function fetchAndUpdateCard(b) {
-  b.profile = await fetchProfile(b.id);
+  const prev = b.profile; // may already have waterTemp from /api/detail
+  const fresh = await fetchProfile(b.id);
+  if (fresh) {
+    // Preserve waterTemp/sampleDate from detail data if testlocationprofile lacks them
+    if (fresh.waterTemp == null && prev?.waterTemp != null) fresh.waterTemp = prev.waterTemp;
+    if (fresh.sampleDate == null && prev?.sampleDate != null) fresh.sampleDate = prev.sampleDate;
+    if (!fresh.algalText && prev?.algalText) fresh.algalText = prev.algalText;
+    b.profile = fresh;
+  }
   refreshCard(b);
   if (currentDetail?.id === b.id) renderDetail(b);
   refreshMapMarker(b);
