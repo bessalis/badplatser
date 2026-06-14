@@ -726,17 +726,20 @@ const mapMarkers = {};
 
 function tempMarkerIcon(b) {
   const si = getStatusInfo(b.profile);
-  const colors = { ok:'#3a8a50', warn:'#d4880a', bad:'#c0392b', unk:'#888' };
+  const colors = { ok:'#3a8a50', warn:'#d4880a', bad:'#c0392b', unk:'#5a7a8a' };
   const color = colors[si.key];
-  const temp = b.profile?.waterTemp != null ? `${Math.round(b.profile.waterTemp)}°` : '?';
+  const temp = b.profile?.waterTemp != null
+    ? `${Math.round(b.profile.waterTemp)}°`
+    : (b.profile ? '–' : '·');
   const html = `<div style="
     background:${color};color:#fff;font-family:-apple-system,sans-serif;
     font-size:11px;font-weight:700;line-height:1;
-    padding:4px 6px;border-radius:99px;
-    border:2px solid #fff;white-space:nowrap;
-    box-shadow:0 1px 4px rgba(0,0,0,0.25);
+    padding:4px 7px;border-radius:99px;
+    border:2px solid rgba(255,255,255,0.9);white-space:nowrap;
+    box-shadow:0 1px 5px rgba(0,0,0,0.3);
+    cursor:pointer;
     ">${temp}</div>`;
-  return L.divIcon({ html, className:'', iconAnchor:[16,12] });
+  return L.divIcon({ html, className: '', iconAnchor: [18, 12] });
 }
 
 function popupHTML(b) {
@@ -818,7 +821,17 @@ function showScreen(name, btn) {
   document.getElementById('screen-' + name).classList.remove('hidden');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  if (name === 'map') { setTimeout(initMap, 50); }
+  if (name === 'map') {
+    setTimeout(async () => {
+      initMap();
+      // If beaches aren't loaded yet, wait for them
+      if (allBeaches.length === 0) {
+        await loadAllBeaches();
+      }
+      addMapMarkers();
+      if (leafletMap) leafletMap.invalidateSize();
+    }, 50);
+  }
   if (name === 'favs') { updateFavsScreen(); updateFavChips(); }
 }
 </script>
