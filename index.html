@@ -4,600 +4,735 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Badplatskollen">
-<meta name="theme-color" content="#0b3d5e">
+<meta name="theme-color" content="#f5f0e8">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Badplatskollen">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <title>Badplatskollen</title>
 <style>
 :root {
-  --bg: #f0f4f7;
-  --card: #ffffff;
-  --header-bg: #0b3d5e;
-  --header-fg: #ffffff;
-  --text: #111827;
-  --muted: #6b7280;
-  --border: rgba(0,0,0,0.08);
-  --blue: #0b7ac4;
-  --blue-light: #dbeeff;
-  --blue-dark: #0b3d5e;
-  --ok: #16a34a;
-  --ok-bg: #dcfce7;
-  --ok-text: #14532d;
-  --warn: #d97706;
-  --warn-bg: #fef3c7;
-  --warn-text: #78350f;
-  --bad: #dc2626;
-  --bad-bg: #fee2e2;
-  --bad-text: #7f1d1d;
-  --unk: #6b7280;
-  --unk-bg: #f3f4f6;
-  --unk-text: #374151;
-  --r: 16px;
-  --rs: 10px;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f172a;
-    --card: #1e293b;
-    --header-bg: #0b3d5e;
-    --text: #f1f5f9;
-    --muted: #94a3b8;
-    --border: rgba(255,255,255,0.07);
-    --blue-light: #0c2d4a;
-    --ok-bg: #052e16; --ok-text: #86efac;
-    --warn-bg: #1c1002; --warn-text: #fcd34d;
-    --bad-bg: #1c0505; --bad-text: #fca5a5;
-    --unk-bg: #1e293b; --unk-text: #94a3b8;
-  }
+  --sand:       #f5f0e8;
+  --sand-dark:  #e8e1d4;
+  --sand-deep:  #c8bfaf;
+  --ocean:      #1a4a5e;
+  --ocean-mid:  #2d6a82;
+  --ocean-light:#e8f2f7;
+  --text:       #1a1a18;
+  --text-mid:   #4a4a42;
+  --text-muted: #8a8a80;
+  --ok:         #2d6b3e;
+  --ok-bg:      #e8f3ec;
+  --ok-dot:     #3a8a50;
+  --warn:       #7a5200;
+  --warn-bg:    #fef3d8;
+  --warn-dot:   #d4880a;
+  --bad:        #7a1f1f;
+  --bad-bg:     #fde8e8;
+  --bad-dot:    #c0392b;
+  --unk-dot:    #aaa;
+  --card:       #ffffff;
+  --border:     rgba(0,0,0,0.07);
+  --r:          18px;
+  --nav-h:      68px;
+  --font-serif: 'Lora', Georgia, serif;
+  --font-sans:  'Inter', -apple-system, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html { height: 100%; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100%; overscroll-behavior-y: none; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: var(--font-sans);
+  background: var(--sand);
+  color: var(--text);
+  max-width: 430px;
+  margin: 0 auto;
+  position: relative;
+}
 
-/* HEADER */
-.hdr { background: var(--header-bg); padding: env(safe-area-inset-top,0) 0 0; position: sticky; top: 0; z-index: 20; }
-.hdr-inner { padding: 14px 16px 12px; display: flex; align-items: center; justify-content: space-between; }
-.hdr-title { color: #fff; font-size: 19px; font-weight: 700; letter-spacing: -0.4px; display: flex; align-items: center; gap: 7px; }
-.hdr-wave { font-size: 20px; }
-.hdr-sub { color: rgba(255,255,255,0.55); font-size: 11.5px; margin-top: 1px; }
-.hdr-refresh { background: rgba(255,255,255,0.15); border: none; color: #fff; width: 34px; height: 34px; border-radius: 50%; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
-.hdr-refresh:active { background: rgba(255,255,255,0.3); }
+/* ── SCREENS ── */
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--sand); transition: transform 0.32s cubic-bezier(.4,0,.2,1), opacity 0.32s; }
+.screen.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
+.screen.slide-up { transform: translateY(100%); opacity: 0; pointer-events: none; }
 
-/* GPS BAR */
-.gps-bar { background: var(--header-bg); border-top: 1px solid rgba(255,255,255,0.1); padding: 0 16px 10px; display: flex; gap: 8px; }
-.btn-gps { flex: 1; height: 36px; border-radius: 99px; border: 1.5px solid rgba(255,255,255,0.35); background: transparent; color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: background 0.15s; }
-.btn-gps:active { background: rgba(255,255,255,0.1); }
-.btn-gps.active { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.6); }
-.gps-status { font-size: 11px; color: rgba(255,255,255,0.5); text-align: center; padding: 0 0 2px; }
+/* ── NAV BAR ── */
+.nav { position: absolute; bottom: 0; left: 0; right: 0; height: var(--nav-h); background: var(--card); border-top: 1px solid var(--border); display: flex; padding-bottom: env(safe-area-inset-bottom, 0); z-index: 50; }
+.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: none; background: none; cursor: pointer; color: var(--text-muted); font-family: var(--font-sans); font-size: 10px; font-weight: 500; padding-top: 8px; transition: color 0.15s; }
+.nav-btn.active { color: var(--ocean); }
+.nav-icon { font-size: 22px; line-height: 1; }
+.nav-btn.active .nav-icon { transform: scale(1.08); }
 
-/* MAIN SCROLL */
-.scroll { overflow-y: auto; padding: 14px 14px 100px; }
+/* ── SCROLLABLE CONTENT ── */
+.scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: var(--nav-h); }
 
-/* SECTION HEADERS */
-.section-hdr { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); padding: 0 4px 8px; margin-top: 6px; }
+/* ── PAGE HEADER ── */
+.page-head { padding: 56px 20px 16px; }
+.page-eyebrow { font-family: var(--font-sans); font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.page-title { font-family: var(--font-serif); font-size: 30px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); line-height: 1.15; }
+.page-title-row { display: flex; align-items: flex-start; justify-content: space-between; }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-mid); margin-top: 4px; }
+.icon-btn:active { background: var(--sand-dark); }
 
-/* FAV GRID */
-.fav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-.fav-card { background: var(--card); border-radius: var(--r); border: 1px solid var(--border); padding: 12px 12px 10px; cursor: pointer; position: relative; min-height: 100px; transition: transform 0.1s; }
-.fav-card:active { transform: scale(0.96); }
-.fav-card.empty { border: 1.5px dashed var(--border); background: transparent; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13px; }
-.fav-card.empty .plus { font-size: 22px; opacity: 0.4; }
-.fav-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; margin-bottom: 6px; }
-.fav-name { font-size: 13px; font-weight: 700; line-height: 1.25; color: var(--text); }
-.fav-mun { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.fav-emoji { font-size: 22px; flex-shrink: 0; }
-.fav-temp { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--blue); margin: 4px 0 2px; }
-.fav-temp span { font-size: 13px; font-weight: 400; color: var(--muted); }
-.fav-status { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 99px; display: inline-block; }
-.fav-date { font-size: 10px; color: var(--muted); margin-top: 4px; }
-.fav-remove { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,0.08); border: none; color: var(--muted); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
-.fav-card:hover .fav-remove { opacity: 1; }
-.fav-loading { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 5px; margin-top: 8px; }
+/* ── SEARCH BAR ── */
+.search-wrap { padding: 0 20px 14px; position: relative; }
+.search-bar { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0 14px; height: 44px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.search-bar input { flex: 1; border: none; background: none; font-size: 15px; color: var(--text); outline: none; font-family: var(--font-sans); }
+.search-bar input::placeholder { color: var(--text-muted); }
+.search-icon { color: var(--text-muted); font-size: 16px; }
 
-/* NEARBY LIST */
-.nearby-list { display: flex; flex-direction: column; gap: 8px; }
-.beach-card { background: var(--card); border-radius: var(--r); border: 1px solid var(--border); padding: 13px 14px; display: flex; gap: 12px; align-items: center; cursor: pointer; transition: transform 0.1s; }
-.beach-card:active { transform: scale(0.98); }
-.beach-left { flex: 1; min-width: 0; }
-.beach-name { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.beach-meta { font-size: 12px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 8px; }
-.beach-dist { background: var(--blue-light); color: var(--blue-dark); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
-@media (prefers-color-scheme: dark) { .beach-dist { color: #60b8f0; } }
-.beach-status-row { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
-.beach-right { text-align: right; flex-shrink: 0; }
-.beach-temp { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--blue); }
-.beach-air { font-size: 11px; color: var(--muted); margin-top: 1px; }
-.beach-emoji { font-size: 22px; }
+/* ── FILTER PILLS ── */
+.filter-row { display: flex; gap: 8px; padding: 0 20px 16px; overflow-x: auto; scrollbar-width: none; }
+.filter-row::-webkit-scrollbar { display: none; }
+.pill { display: flex; align-items: center; gap: 5px; height: 32px; padding: 0 14px; border-radius: 99px; border: 1.5px solid var(--border); background: var(--card); font-size: 13px; font-weight: 500; color: var(--text-mid); cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+.pill.active { background: var(--text); color: #fff; border-color: var(--text); }
+.pill-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-/* STATUS BADGE */
-.badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
-.badge-ok { background: var(--ok-bg); color: var(--ok-text); }
-.badge-warn { background: var(--warn-bg); color: var(--warn-text); }
-.badge-bad { background: var(--bad-bg); color: var(--bad-text); }
-.badge-unk { background: var(--unk-bg); color: var(--unk-text); }
+/* ── RESULT COUNT ── */
+.result-count { padding: 0 20px 10px; font-size: 13px; color: var(--text-muted); }
 
-/* EMPTY / STATES */
-.empty { text-align: center; padding: 40px 20px; color: var(--muted); }
-.empty-icon { font-size: 44px; margin-bottom: 10px; }
-.empty p { font-size: 14px; line-height: 1.6; }
-.load-more { width: 100%; margin-top: 12px; padding: 13px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); font-size: 14px; color: var(--blue); cursor: pointer; font-weight: 500; }
-.load-more:active { opacity: 0.7; }
+/* ── BEACH CARD (list) ── */
+.beach-list { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+.bcard { background: var(--card); border-radius: var(--r); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07); cursor: pointer; transition: transform 0.12s; }
+.bcard:active { transform: scale(0.98); }
+.bcard-img { width: 100%; height: 160px; object-fit: cover; background: var(--sand-dark); display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; }
+.bcard-img-inner { width: 100%; height: 160px; background: linear-gradient(135deg, #b8d4e0 0%, #7aabb8 40%, #4a8a9e 100%); position: relative; overflow: hidden; }
+.bcard-img-inner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.35) 100%); }
+.bcard-wave { position: absolute; bottom: 0; left: 0; right: 0; }
+.bcard-status-pill { position: absolute; top: 12px; left: 12px; z-index: 2; display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); border-radius: 99px; padding: 5px 10px 5px 8px; font-size: 12px; font-weight: 600; }
+.bcard-fav { position: absolute; top: 10px; right: 10px; z-index: 2; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.bcard-body { padding: 12px 14px 14px; }
+.bcard-name { font-family: var(--font-serif); font-size: 19px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; }
+.bcard-loc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.bcard-meta { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.bcard-chip { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-mid); }
+.bcard-chip-icon { font-size: 13px; }
+.quality-badge { margin-left: auto; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; }
 
-/* BOTTOM SHEET / SEARCH */
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 30; display: none; }
-.sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-radius: 20px 20px 0 0; z-index: 40; padding: 0 0 env(safe-area-inset-bottom,20px); max-height: 80vh; display: none; flex-direction: column; }
-.sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 14px; }
-.sheet-title { font-size: 16px; font-weight: 700; padding: 0 16px 12px; border-bottom: 1px solid var(--border); }
-.sheet-search { padding: 12px 16px; display: flex; gap: 8px; }
-.sheet-search input { flex: 1; height: 40px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: var(--rs); font-size: 15px; background: var(--bg); color: var(--text); outline: none; }
-.sheet-search input:focus { border-color: var(--blue); }
-.sheet-search button { height: 40px; padding: 0 14px; background: var(--blue); color: #fff; border: none; border-radius: var(--rs); font-size: 14px; font-weight: 600; cursor: pointer; }
-.sheet-results { overflow-y: auto; flex: 1; }
-.sheet-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-.sheet-item:active { background: var(--bg); }
-.sheet-item-name { font-size: 15px; font-weight: 500; }
-.sheet-item-mun { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.sheet-item-dist { font-size: 13px; color: var(--blue); font-weight: 600; }
+/* ── STATUS COLORS ── */
+.s-ok   { color: var(--ok); }
+.s-warn { color: var(--warn); }
+.s-bad  { color: var(--bad); }
+.s-unk  { color: var(--text-muted); }
+.dot-ok   { background: var(--ok-dot); }
+.dot-warn { background: var(--warn-dot); }
+.dot-bad  { background: var(--bad-dot); }
+.dot-unk  { background: var(--unk-dot); }
+.bg-ok   { background: var(--ok-bg); color: var(--ok); }
+.bg-warn { background: var(--warn-bg); color: var(--warn); }
+.bg-bad  { background: var(--bad-bg); color: var(--bad); }
+.bg-unk  { background: var(--sand-dark); color: var(--text-muted); }
 
-/* SPINNER */
+/* ── LOAD MORE ── */
+.load-more { margin: 16px 20px 4px; padding: 14px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); font-size: 14px; font-weight: 500; color: var(--ocean); cursor: pointer; width: calc(100% - 40px); font-family: var(--font-sans); }
+.load-more:active { background: var(--ocean-light); }
+
+/* ── DETAIL SCREEN ── */
+.detail-back { position: absolute; top: env(safe-area-inset-top,12px); left: 12px; z-index: 10; width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border: none; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+.detail-fav { position: absolute; top: env(safe-area-inset-top,12px); right: 12px; z-index: 10; width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border: none; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+.detail-hero { width: 100%; height: 240px; position: relative; flex-shrink: 0; }
+.detail-hero-img { width: 100%; height: 100%; background: linear-gradient(135deg, #9ec8d8 0%, #5a9aae 50%, #2d6a82 100%); position: relative; overflow: hidden; }
+.detail-hero-img::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.4) 100%); }
+.detail-hero-text { position: absolute; bottom: 20px; left: 20px; right: 20px; z-index: 2; }
+.detail-hero-name { font-family: var(--font-serif); font-size: 28px; font-weight: 600; color: #fff; letter-spacing: -0.3px; line-height: 1.15; text-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.detail-hero-loc { font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 3px; display: flex; align-items: center; gap: 5px; }
+.detail-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 20px calc(var(--nav-h) + 12px); }
+.detail-status-banner { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 14px; margin-bottom: 16px; }
+.detail-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.detail-status-label { font-size: 15px; font-weight: 700; }
+.detail-status-sub { font-size: 13px; opacity: 0.8; margin-top: 1px; }
+.detail-section-title { font-family: var(--font-serif); font-size: 18px; font-weight: 600; color: var(--text); margin: 20px 0 10px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.detail-tile { background: var(--card); border-radius: 14px; padding: 14px; border: 1px solid var(--border); }
+.detail-tile-icon { font-size: 20px; margin-bottom: 6px; }
+.detail-tile-label { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 2px; }
+.detail-tile-val { font-family: var(--font-serif); font-size: 26px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; }
+.detail-tile-val span { font-size: 14px; font-weight: 400; color: var(--text-muted); font-family: var(--font-sans); }
+.detail-about { font-size: 14px; line-height: 1.65; color: var(--text-mid); }
+.detail-sample-date { font-size: 12px; color: var(--text-muted); margin-top: 14px; display: flex; align-items: center; gap: 5px; }
+.detail-classification { display: flex; align-items: center; justify-content: space-between; background: var(--card); border-radius: 14px; padding: 14px 16px; border: 1px solid var(--border); margin-top: 10px; }
+.detail-class-label { font-size: 13px; color: var(--text-muted); }
+.detail-class-val { font-size: 15px; font-weight: 700; }
+
+/* ── MAP SCREEN ── */
+.map-container { flex: 1; position: relative; background: #d4e4c8; overflow: hidden; }
+.map-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: var(--text-muted); font-size: 14px; }
+#map { width: 100%; height: 100%; }
+.map-head { padding: 48px 20px 12px; background: var(--sand); border-bottom: 1px solid var(--border); }
+.map-legend { display: flex; gap: 16px; margin-top: 10px; }
+.map-legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-mid); }
+
+/* ── FAVORITES SCREEN ── */
+.fav-head { padding: 56px 20px 20px; }
+.fav-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+.fav-chips::-webkit-scrollbar { display: none; }
+.fav-chip { flex-shrink: 0; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 10px 14px; text-align: center; min-width: 90px; cursor: pointer; transition: transform 0.1s; }
+.fav-chip:active { transform: scale(0.96); }
+.fav-chip-dot { width: 8px; height: 8px; border-radius: 50%; margin: 0 auto 6px; }
+.fav-chip-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+.fav-chip-temp { font-size: 13px; font-weight: 700; color: var(--ocean); margin-top: 2px; }
+.fav-count { font-size: 13px; color: var(--text-muted); padding: 16px 20px 8px; }
+.fav-list { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+.fav-empty { text-align: center; padding: 60px 30px; color: var(--text-muted); }
+.fav-empty-icon { font-size: 48px; margin-bottom: 12px; }
+.fav-empty p { font-size: 15px; line-height: 1.6; }
+
+/* ── SPINNER ── */
 @keyframes spin { to { transform: rotate(360deg); } }
-.spin { display: inline-block; width: 13px; height: 13px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; opacity: 0.5; vertical-align: middle; }
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; opacity: 0.5; vertical-align: middle; }
 
-/* FOOTER */
-.footer { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 8px 16px env(safe-area-inset-bottom,8px); display: flex; justify-content: center; align-items: center; font-size: 11px; color: var(--muted); gap: 10px; }
-.footer a { color: var(--blue); text-decoration: none; }
+/* ── BEACH PHOTO VARIANTS (CSS-generated) ── */
+.bg-beach-1 { background: linear-gradient(160deg, #a8ccd8 0%, #6aa3b5 35%, #3d7d92 70%, #2a6070 100%); }
+.bg-beach-2 { background: linear-gradient(160deg, #c8d8b0 0%, #8ab888 40%, #4a8870 70%, #2a5848 100%); }
+.bg-beach-3 { background: linear-gradient(160deg, #d8c8a0 0%, #b8a870 40%, #7a8850 70%, #4a5830 100%); }
+.bg-beach-4 { background: linear-gradient(160deg, #b0c8d8 0%, #7aaac0 40%, #3a7898 70%, #1a5070 100%); }
+.bg-beach-5 { background: linear-gradient(160deg, #c0d0c0 0%, #88b098 40%, #488068 70%, #286050 100%); }
 </style>
 </head>
 <body>
 
-<div class="hdr">
-  <div class="hdr-inner">
-    <div>
-      <div class="hdr-title"><span class="hdr-wave">🏊</span> Badplatskollen</div>
-      <div class="hdr-sub" id="hdr-sub">Hämtar position…</div>
+<!-- ══════════════════════════════════════════════════════ SEARCH SCREEN -->
+<div class="screen" id="screen-search">
+  <div class="scroll" id="search-scroll">
+    <div class="page-head">
+      <div class="page-eyebrow" id="search-eyebrow">IDAG · <span id="today-date"></span></div>
+      <div class="page-title-row">
+        <div class="page-title">Välj din<br>badplats</div>
+        <button class="icon-btn" onclick="getGPS()" title="Sortera efter avstånd">📍</button>
+      </div>
     </div>
-    <button class="hdr-refresh" onclick="refreshAll()" title="Uppdatera">↻</button>
-  </div>
-  <div class="gps-bar">
-    <button class="btn-gps" id="btn-gps" onclick="getGPS()">📍 Närmast mig</button>
-  </div>
-  <div class="gps-status" id="gps-status"></div>
-</div>
-
-<div class="scroll" id="scroll">
-  <div id="fav-section">
-    <div class="section-hdr">Favoriter</div>
-    <div class="fav-grid" id="fav-grid"></div>
-  </div>
-  <div id="nearby-section">
-    <div class="section-hdr" id="nearby-hdr">Badplatser i närheten</div>
-    <div class="nearby-list" id="nearby-list">
-      <div class="empty"><div class="empty-icon">📍</div><p>Tryck på "Närmast mig"<br>för att se badplatser nära dig</p></div>
+    <div class="search-wrap">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Sök strand, stad eller region…" autocomplete="off" />
+      </div>
+    </div>
+    <div class="filter-row">
+      <button class="pill active" data-filter="all" onclick="setFilter('all',this)">Alla</button>
+      <button class="pill" data-filter="ok" onclick="setFilter('ok',this)"><span class="pill-dot dot-ok"></span>Tjänligt</button>
+      <button class="pill" data-filter="warn" onclick="setFilter('warn',this)"><span class="pill-dot dot-warn"></span>Anmärkning</button>
+      <button class="pill" data-filter="bad" onclick="setFilter('bad',this)"><span class="pill-dot dot-bad"></span>Förbud</button>
+    </div>
+    <div class="result-count" id="result-count"></div>
+    <div class="beach-list" id="beach-list">
+      <div style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;">
+        <div style="font-size:36px;margin-bottom:10px">📍</div>
+        Tryck på 📍 för att se badplatser nära dig,<br>eller sök efter en plats
+      </div>
     </div>
     <button class="load-more" id="load-more-btn" onclick="loadMore()" style="display:none">Visa fler badplatser</button>
+    <div style="height:12px"></div>
   </div>
 </div>
 
-<!-- Search sheet -->
-<div class="overlay" id="overlay" onclick="closeSheet()"></div>
-<div class="sheet" id="sheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-title">Lägg till favorit</div>
-  <div class="sheet-search">
-    <input type="text" id="sheet-input" placeholder="Sök badplats…" autocomplete="off" />
-    <button onclick="doSearch()">Sök</button>
+<!-- ══════════════════════════════════════════════════════ DETAIL SCREEN -->
+<div class="screen hidden" id="screen-detail">
+  <button class="detail-back" onclick="closeDetail()">←</button>
+  <button class="detail-fav" id="detail-fav-btn" onclick="toggleFavDetail()">🤍</button>
+  <div class="detail-hero" id="detail-hero">
+    <div class="detail-hero-img" id="detail-hero-img"></div>
+    <div class="detail-hero-text">
+      <div class="detail-hero-name" id="detail-name"></div>
+      <div class="detail-hero-loc" id="detail-loc"></div>
+    </div>
   </div>
-  <div class="sheet-results" id="sheet-results">
-    <div style="padding:20px;text-align:center;color:var(--muted);font-size:14px;">Sök efter en badplats att lägga till som favorit</div>
+  <div class="detail-body">
+    <div class="detail-status-banner" id="detail-banner"></div>
+    <div class="detail-section-title">Förhållanden</div>
+    <div class="detail-grid" id="detail-grid"></div>
+    <div id="detail-classification-wrap"></div>
+    <div class="detail-section-title" id="detail-about-title" style="display:none">Om stranden</div>
+    <div class="detail-about" id="detail-about"></div>
+    <div class="detail-sample-date" id="detail-sample-date"></div>
   </div>
 </div>
 
-<div class="footer">
-  <span>Data: <a href="https://www.havochvatten.se/badplatser-och-badvatten.html" target="_blank">Havochvatten.se</a></span>
-  <span id="last-upd"></span>
+<!-- ══════════════════════════════════════════════════════ MAP SCREEN -->
+<div class="screen hidden" id="screen-map">
+  <div class="map-head">
+    <div class="page-eyebrow">SVERIGE</div>
+    <div class="page-title">Badkarta</div>
+    <div class="map-legend">
+      <div class="map-legend-item"><span style="width:10px;height:10px;border-radius:50%;background:var(--ok-dot);display:inline-block"></span> Tjänligt</div>
+      <div class="map-legend-item"><span style="width:10px;height:10px;border-radius:50%;background:var(--warn-dot);display:inline-block"></span> Anmärkning</div>
+      <div class="map-legend-item"><span style="width:10px;height:10px;border-radius:50%;background:var(--bad-dot);display:inline-block"></span> Förbud</div>
+    </div>
+  </div>
+  <div class="map-container">
+    <div class="map-placeholder" id="map-placeholder">
+      <div style="font-size:36px">🗺️</div>
+      <div>Laddar karta…</div>
+    </div>
+    <div id="map"></div>
+  </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════ FAVORITES SCREEN -->
+<div class="screen hidden" id="screen-favs">
+  <div class="scroll">
+    <div class="fav-head">
+      <div class="page-eyebrow">DINA VAL</div>
+      <div class="page-title">Favoriter</div>
+    </div>
+    <div style="padding:0 20px 4px"><div class="fav-chips" id="fav-chips"></div></div>
+    <div class="fav-count" id="fav-count"></div>
+    <div class="fav-list" id="fav-list"></div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ BOTTOM NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showScreen('search',this)">
+    <span class="nav-icon">🔍</span>Sök
+  </button>
+  <button class="nav-btn" onclick="showScreen('map',this)">
+    <span class="nav-icon">📍</span>Karta
+  </button>
+  <button class="nav-btn" onclick="showScreen('favs',this)">
+    <span class="nav-icon">🤍</span>Favoriter
+  </button>
+</nav>
+
+<!-- Leaflet for map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-// ─── CONFIG ─────────────────────────────────────────────────────────────────
-const FAV_KEY   = 'badkollen_favs_v3';
-const FEAT_URL  = 'https://badplatsen.havochvatten.se/badplatsen/api/feature/';
-const PROF_URL  = 'https://badplatsen.havochvatten.se/badplatsen/api/testlocationprofile/';
-const NEARBY_COUNT = 10;
-const NEARBY_BATCH = 5; // how many to fetch status for at once
+// ══════════════════════════ DATA & STATE
+const FEAT_URL = 'https://badplatsen.havochvatten.se/badplatsen/api/feature/';
+const PROF_URL = 'https://badplatsen.havochvatten.se/badplatsen/api/testlocationprofile/';
+const FAV_KEY  = 'badkollen_v4';
 
-// ─── STATE ──────────────────────────────────────────────────────────────────
-let allBeaches  = [];   // [{NUTSKOD, NAMN, KMN_NAMN, lat, lon}]
-let userLat     = null;
-let userLon     = null;
-let nearbyAll   = [];   // sorted by distance
-let nearbyShown = 0;
-let favs        = [];   // [{NUTSKOD, NAMN, KMN_NAMN, lat, lon, profile?}]
-let searchAll   = [];   // search results list
+let allBeaches = [];
+let userLat = null, userLon = null;
+let sortedBeaches = [];
+let shownCount = 0;
+const PAGE_SIZE = 10;
+let activeFilter = 'all';
+let searchQuery = '';
+let currentDetail = null;
+let favIds = [];
+let leafletMap = null, mapInitialized = false;
+let beachProfiles = {}; // cache
 
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// ══════════════════════════ INIT
 (async () => {
-  loadFavs();
-  renderFavGrid();
+  setTodayDate();
+  loadFavIds();
   await loadAllBeaches();
   getGPS();
 })();
 
-// ─── LOAD ALL BEACHES ────────────────────────────────────────────────────────
+function setTodayDate() {
+  const d = new Date();
+  const months = ['JAN','FEB','MAR','APR','MAJ','JUN','JUL','AUG','SEP','OKT','NOV','DEC'];
+  document.getElementById('today-date').textContent = d.getDate() + ' ' + months[d.getMonth()];
+}
+
+// ══════════════════════════ BEACHES
 async function loadAllBeaches() {
   try {
     const r = await fetch(FEAT_URL);
-    const json = await r.json();
-    allBeaches = json.features.map(f => ({
-      NUTSKOD: f.properties.NUTSKOD,
-      NAMN: f.properties.NAMN,
-      KMN_NAMN: f.properties.KMN_NAMN,
+    const j = await r.json();
+    allBeaches = j.features.map(f => ({
+      id: f.properties.NUTSKOD,
+      name: f.properties.NAMN,
+      municipality: f.properties.KMN_NAMN,
       lat: f.geometry.coordinates[1],
       lon: f.geometry.coordinates[0],
+      dist: null,
+      profile: null,
+      bgClass: 'bg-beach-' + ((Math.abs(hashStr(f.properties.NUTSKOD)) % 5) + 1)
     }));
-  } catch(e) {
-    console.error('loadAllBeaches', e);
-  }
+  } catch(e) { console.error(e); }
 }
 
-// ─── GPS ────────────────────────────────────────────────────────────────────
-function getGPS() {
-  const btn = document.getElementById('btn-gps');
-  btn.classList.add('active');
-  btn.textContent = '📍 Hämtar position…';
-  document.getElementById('gps-status').textContent = '';
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+  return h;
+}
 
-  if (!navigator.geolocation) {
-    showGPSError('GPS ej tillgänglig i denna webbläsare');
+// ══════════════════════════ GPS
+function getGPS() {
+  const btn = document.querySelector('#screen-search .icon-btn');
+  btn.textContent = '⏳';
+  navigator.geolocation?.getCurrentPosition(pos => {
+    userLat = pos.coords.latitude;
+    userLon = pos.coords.longitude;
+    btn.textContent = '📍';
+    document.getElementById('search-eyebrow').innerHTML =
+      'IDAG · <span id="today-date"></span>';
+    setTodayDate();
+    buildList();
+  }, () => {
+    btn.textContent = '📍';
+    buildList();
+  }, { timeout: 10000, maximumAge: 60000 });
+}
+
+function haversine(a,b,c,d){
+  const R=6371,dL=(c-a)*Math.PI/180,dO=(d-b)*Math.PI/180;
+  const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function fmtDist(km) {
+  return km < 1 ? Math.round(km*1000)+' m' : km < 10 ? km.toFixed(1)+' km' : Math.round(km)+' km';
+}
+
+// ══════════════════════════ FILTERING & RENDERING
+function buildList() {
+  let list = [...allBeaches];
+  if (userLat !== null) {
+    list.forEach(b => b.dist = haversine(userLat, userLon, b.lat, b.lon));
+    list.sort((a,b) => a.dist - b.dist);
+  }
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    list = list.filter(b => b.name.toLowerCase().includes(q) || b.municipality.toLowerCase().includes(q));
+  }
+  sortedBeaches = list;
+  shownCount = 0;
+  document.getElementById('beach-list').innerHTML = '';
+  document.getElementById('load-more-btn').style.display = 'none';
+  renderNextBatch();
+}
+
+function getStatusInfo(profile) {
+  if (!profile) return { key:'unk', label:'Hämtar…', sub:'', dot:'dot-unk', bg:'bg-unk', qual:'' };
+  if (profile.badForbidden) return { key:'bad', label:'Badförbud', sub:'Kommunen har utfärdat badförbud', dot:'dot-bad', bg:'bg-bad', qual:'Förbud' };
+  if (profile.algae) return { key:'warn', label:'Blomning', sub:'Algblomning rapporterad', dot:'dot-warn', bg:'bg-warn', qual:'Blomning' };
+  if (profile.latestRating === 0) return { key:'bad', label:'Otjänligt', sub:'Vattnet är ej tjänligt för bad', dot:'dot-bad', bg:'bg-bad', qual:'Otjänligt' };
+  if (profile.latestRating === 1) return { key:'warn', label:'Tjänligt med anmärkning', sub:'Vissa brister har noterats', dot:'dot-warn', bg:'bg-warn', qual:'Anmärkning' };
+  if (profile.latestRating === 2 || profile.latestRating === 3) return { key:'ok', label:'Tjänligt', sub:'Säkert att bada – goda förhållanden', dot:'dot-ok', bg:'bg-ok', qual:'Tjänligt' };
+  return { key:'unk', label:'Ej provtaget', sub:'Ingen aktuell provtagning', dot:'dot-unk', bg:'bg-unk', qual:'' };
+}
+
+function renderNextBatch() {
+  let visible = sortedBeaches;
+  if (activeFilter !== 'all') {
+    visible = sortedBeaches.filter(b => {
+      if (!b.profile) return false;
+      return getStatusInfo(b.profile).key === activeFilter;
+    });
+  }
+  const batch = visible.slice(shownCount, shownCount + PAGE_SIZE);
+  shownCount += batch.length;
+  const list = document.getElementById('beach-list');
+  document.getElementById('result-count').textContent =
+    visible.length > 0 ? visible.length + ' badplatser hittades' : '';
+  if (batch.length === 0 && shownCount === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;">Inga badplatser matchar filtret</div>';
     return;
   }
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      userLat = pos.coords.latitude;
-      userLon = pos.coords.longitude;
-      btn.textContent = '📍 Uppdatera position';
-      document.getElementById('hdr-sub').textContent = 'Sorterat efter avstånd';
-      buildNearby();
-    },
-    err => {
-      showGPSError('Tillåt plats för att se närmaste bad');
-      btn.textContent = '📍 Närmast mig';
-      btn.classList.remove('active');
-    },
-    { timeout: 12000, maximumAge: 60000 }
-  );
-}
-
-function showGPSError(msg) {
-  document.getElementById('gps-status').textContent = msg;
-  document.getElementById('hdr-sub').textContent = 'Ingen position';
-}
-
-// ─── NEARBY ─────────────────────────────────────────────────────────────────
-function haversine(la1,lo1,la2,lo2){
-  const R=6371, dL=(la2-la1)*Math.PI/180, dO=(lo2-lo1)*Math.PI/180;
-  const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-function fmtDist(km){
-  if(km<1) return Math.round(km*1000)+' m';
-  if(km<10) return km.toFixed(1)+' km';
-  return Math.round(km)+' km';
-}
-
-async function buildNearby() {
-  if (!allBeaches.length || userLat===null) return;
-  nearbyAll = allBeaches
-    .map(b => ({ ...b, dist: haversine(userLat,userLon,b.lat,b.lon) }))
-    .sort((a,b) => a.dist - b.dist);
-  nearbyShown = 0;
-  document.getElementById('nearby-list').innerHTML = '';
-  document.getElementById('load-more-btn').style.display = 'none';
-  await showNextBatch();
-  // also refresh favs distances
-  renderFavGrid();
-}
-
-async function showNextBatch() {
-  const batch = nearbyAll.slice(nearbyShown, nearbyShown + NEARBY_COUNT);
-  nearbyShown += batch.length;
-  // render placeholders
   batch.forEach(b => {
     const el = document.createElement('div');
-    el.className = 'beach-card';
-    el.id = 'bc-' + b.NUTSKOD;
-    el.innerHTML = beachCardHTML(b, null);
-    el.onclick = () => toggleFav(b);
-    document.getElementById('nearby-list').appendChild(el);
+    el.className = 'bcard';
+    el.id = 'bcard-' + b.id;
+    el.innerHTML = bcardHTML(b);
+    el.onclick = () => openDetail(b);
+    list.appendChild(el);
+    if (!b.profile) fetchAndUpdateCard(b);
   });
-  // fetch status
-  await Promise.all(batch.map(b => fetchAndRenderBeach(b)));
   document.getElementById('load-more-btn').style.display =
-    nearbyShown < nearbyAll.length ? '' : 'none';
+    shownCount < visible.length ? '' : 'none';
 }
 
-function loadMore() { showNextBatch(); }
-
-function beachCardHTML(b, profile) {
-  const dist = b.dist != null ? `<span class="beach-dist">${fmtDist(b.dist)}</span>` : '';
-  const isFav = favs.some(f=>f.NUTSKOD===b.NUTSKOD);
-  const favStar = `<span style="font-size:14px;opacity:${isFav?1:0.25}">${isFav?'⭐':'☆'}</span>`;
-
-  if (!profile) {
-    return `
-      <div class="beach-left">
-        <div class="beach-name">${b.NAMN}</div>
-        <div class="beach-meta">${b.KMN_NAMN} ${dist}</div>
-        <div class="beach-status-row"><span class="badge badge-unk"><span class="spin"></span> hämtar…</span></div>
-      </div>
-      <div class="beach-right">${favStar}</div>`;
+function loadMore() {
+  shownCount -= PAGE_SIZE; // will be re-added in renderNextBatch... actually just call:
+  let visible = sortedBeaches;
+  if (activeFilter !== 'all') {
+    visible = sortedBeaches.filter(b => b.profile && getStatusInfo(b.profile).key === activeFilter);
   }
+  const batch = visible.slice(shownCount, shownCount + PAGE_SIZE);
+  shownCount += batch.length;
+  const list = document.getElementById('beach-list');
+  batch.forEach(b => {
+    if (document.getElementById('bcard-' + b.id)) return;
+    const el = document.createElement('div');
+    el.className = 'bcard';
+    el.id = 'bcard-' + b.id;
+    el.innerHTML = bcardHTML(b);
+    el.onclick = () => openDetail(b);
+    list.appendChild(el);
+    if (!b.profile) fetchAndUpdateCard(b);
+  });
+  document.getElementById('load-more-btn').style.display =
+    shownCount < visible.length ? '' : 'none';
+}
 
-  const emoji = statusEmoji(profile);
-  const temp = profile.waterTemp != null ? `${profile.waterTemp.toFixed(1)}°` : '–';
-  const airTemp = profile.airTemp != null ? `☁ ${profile.airTemp.toFixed(1)}°` : '';
-  const { cls, label } = statusBadge(profile);
-  const dateStr = profile.sampleDate ? `Prov ${profile.sampleDate}` : '';
-
+function bcardHTML(b) {
+  const si = getStatusInfo(b.profile);
+  const isFav = favIds.includes(b.id);
+  const dist = b.dist != null ? `· ${fmtDist(b.dist)}` : '';
+  const temp = b.profile?.waterTemp != null ? `🌊 ${b.profile.waterTemp.toFixed(1)}°` : (b.profile ? '🌊 –' : '');
+  const algaeEmoji = b.profile ? (b.profile.algae ? '🦀 Blomning' : (b.profile.cyano===false ? '🐟 Ingen blomning' : '')) : '';
   return `
-    <div class="beach-left">
-      <div class="beach-name">${b.NAMN}</div>
-      <div class="beach-meta">${b.KMN_NAMN} ${dist}</div>
-      <div class="beach-status-row">
-        <span class="badge ${cls}">${label}</span>
-        ${dateStr ? `<span style="font-size:10px;color:var(--muted)">${dateStr}</span>` : ''}
+    <div class="bcard-img-inner ${b.bgClass}">
+      <div class="bcard-status-pill">
+        <span class="pill-dot ${si.dot}"></span>
+        <span class="${'s-'+si.key}" style="font-size:12px;font-weight:700">${si.label === 'Hämtar…' ? '<span class="spin"></span>' : si.label}</span>
       </div>
+      <button class="bcard-fav" onclick="event.stopPropagation();toggleFav('${b.id}')">${isFav ? '💙' : '🤍'}</button>
     </div>
-    <div class="beach-right">
-      <div class="beach-temp">${temp}<span style="font-size:12px;color:var(--muted)"> 🌊</span></div>
-      ${airTemp ? `<div class="beach-air">${airTemp}</div>` : ''}
-      <div style="font-size:22px;margin-top:3px">${emoji}</div>
-      <div style="font-size:13px;margin-top:2px;opacity:${isFav?1:0.3}">${isFav?'⭐':'☆'}</div>
+    <div class="bcard-body">
+      <div class="bcard-name">${b.name}</div>
+      <div class="bcard-loc">${b.municipality}${dist ? ' · ' + fmtDist(b.dist) : ''}</div>
+      <div class="bcard-meta">
+        ${temp ? `<span class="bcard-chip"><span class="bcard-chip-icon">🌡</span>${temp}</span>` : ''}
+        ${algaeEmoji ? `<span class="bcard-chip">${algaeEmoji}</span>` : ''}
+        ${si.qual ? `<span class="quality-badge ${si.bg}">${si.qual}</span>` : ''}
+      </div>
     </div>`;
 }
 
-function statusEmoji(p) {
-  if (!p) return '❓';
-  if (p.cyano || (p.algae && p.algaeType && p.algaeType.toLowerCase().includes('cyan'))) return '🦀';
-  if (p.algae === true) return '🦀';
-  if (p.cyano === false && p.algae === false) return '🐟';
-  if (p.badForbidden) return '⛔';
-  return '🐟';
+function refreshCard(b) {
+  const el = document.getElementById('bcard-' + b.id);
+  if (el) { el.innerHTML = bcardHTML(b); el.onclick = () => openDetail(b); }
 }
 
-function statusBadge(p) {
-  if (!p) return {cls:'badge-unk', label:'Okänd'};
-  if (p.badForbidden) return {cls:'badge-bad', label:'Badförbud'};
-  if (p.algae) return {cls:'badge-warn', label:'Blomning'};
-  if (p.latestSample) {
-    const r = p.latestSample.rating;
-    if (r===0) return {cls:'badge-bad', label:'Otjänligt'};
-    if (r===1) return {cls:'badge-warn', label:'Tjänligt med anm.'};
-    if (r===2||r===3) return {cls:'badge-ok', label:'Tjänligt ✓'};
-  }
-  return {cls:'badge-unk', label:'Ej provtaget'};
-}
-
-// ─── FETCH PROFILE ──────────────────────────────────────────────────────────
-async function fetchProfile(nutskod) {
+// ══════════════════════════ FETCH PROFILE
+async function fetchProfile(id) {
+  if (beachProfiles[id]) return beachProfiles[id];
   try {
-    const r = await fetch(PROF_URL + nutskod);
+    const r = await fetch(PROF_URL + id);
     const d = await r.json();
-
-    // Parse water temp from samples
-    let waterTemp = null, airTemp = null, sampleDate = null;
-    if (d.samples && d.samples.length > 0) {
+    let waterTemp = null, airTemp = null, sampleDate = null, latestRating = null;
+    if (d.samples?.length > 0) {
       const s = d.samples[0];
       waterTemp = s.waterTemperature ?? null;
       airTemp   = s.airTemperature ?? null;
+      latestRating = s.rating ?? null;
       if (s.sampleDateTime) {
         const dt = new Date(s.sampleDateTime);
-        sampleDate = `${dt.getDate()}/${dt.getMonth()+1}`;
+        sampleDate = `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`;
       }
     }
-    // Copernicus temp fallback
-    if (waterTemp == null && d.coperSmhi && d.coperSmhi.waterTemp != null) {
-      waterTemp = d.coperSmhi.waterTemp;
-    }
-
-    // Latest sample rating
-    let latestSample = null;
-    if (d.samples && d.samples.length > 0) {
-      latestSample = { rating: d.samples[0].rating };
-    }
-
-    return {
+    if (waterTemp == null && d.coperSmhi?.waterTemp != null) waterTemp = d.coperSmhi.waterTemp;
+    const profile = {
       algae: d.algae ?? false,
       cyano: d.cyano ?? false,
       badForbidden: d.badForbidden ?? false,
-      waterTemp,
-      airTemp,
-      sampleDate,
-      latestSample,
+      waterTemp, airTemp, sampleDate, latestRating,
+      description: d.description || d.summary || '',
+      classification: d.classification?.[0] || null,
+      euType: d.euType ?? false,
     };
-  } catch(e) {
-    return null;
-  }
+    beachProfiles[id] = profile;
+    return profile;
+  } catch { return null; }
 }
 
-async function fetchAndRenderBeach(b) {
-  const profile = await fetchProfile(b.NUTSKOD);
-  b._profile = profile;
-  const el = document.getElementById('bc-' + b.NUTSKOD);
-  if (el) {
-    el.innerHTML = beachCardHTML(b, profile);
-    el.onclick = () => toggleFav(b);
-  }
+async function fetchAndUpdateCard(b) {
+  b.profile = await fetchProfile(b.id);
+  refreshCard(b);
+  if (currentDetail?.id === b.id) renderDetail(b);
+  updateFavChips();
 }
 
-// ─── FAVORITES ───────────────────────────────────────────────────────────────
-function loadFavs() {
-  try { favs = JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { favs = []; }
+// ══════════════════════════ FILTERS & SEARCH
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  shownCount = 0;
+  document.getElementById('beach-list').innerHTML = '';
+  renderNextBatch();
 }
-function saveFavs() { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); }
 
-function toggleFav(b) {
-  const idx = favs.findIndex(f => f.NUTSKOD === b.NUTSKOD);
-  if (idx >= 0) {
-    favs.splice(idx, 1);
+document.getElementById('search-input').addEventListener('input', e => {
+  searchQuery = e.target.value.trim();
+  buildList();
+});
+
+// ══════════════════════════ DETAIL
+function openDetail(b) {
+  currentDetail = b;
+  // Set up hero
+  document.getElementById('detail-hero-img').className = 'detail-hero-img ' + b.bgClass;
+  document.getElementById('detail-name').textContent = b.name;
+  const dist = b.dist != null ? ` · ${fmtDist(b.dist)}` : '';
+  document.getElementById('detail-loc').innerHTML = `📍 ${b.municipality}${dist}`;
+  document.getElementById('detail-fav-btn').textContent = favIds.includes(b.id) ? '💙' : '🤍';
+  renderDetail(b);
+  document.getElementById('screen-detail').classList.remove('hidden');
+  if (b.profile === null) fetchAndUpdateCard(b);
+}
+
+function renderDetail(b) {
+  const p = b.profile;
+  const si = getStatusInfo(p);
+
+  // Banner
+  document.getElementById('detail-banner').className = `detail-status-banner ${si.bg}`;
+  document.getElementById('detail-banner').innerHTML = `
+    <span class="detail-status-dot ${si.dot}"></span>
+    <div>
+      <div class="detail-status-label ${`s-${si.key}`}">${si.label}</div>
+      <div class="detail-status-sub">${si.sub}</div>
+    </div>`;
+
+  // Grid
+  const grid = document.getElementById('detail-grid');
+  if (!p) {
+    grid.innerHTML = `<div class="detail-tile" style="grid-column:1/-1;text-align:center;color:var(--text-muted)"><span class="spin"></span> Hämtar förhållanden…</div>`;
   } else {
-    if (favs.length >= 4) {
-      alert('Max 4 favoriter. Ta bort en befintlig först.');
-      return;
+    const wt = p.waterTemp != null ? `${p.waterTemp.toFixed(1)}<span>°C</span>` : `–<span></span>`;
+    const at = p.airTemp != null ? `${p.airTemp.toFixed(1)}<span>°C</span>` : `–<span></span>`;
+    const alg = p.algae ? '🦀 Ja' : '🐟 Nej';
+    const algColor = p.algae ? 'var(--warn)' : 'var(--ok)';
+    grid.innerHTML = `
+      <div class="detail-tile">
+        <div class="detail-tile-icon">🌊</div>
+        <div class="detail-tile-label">Vattentemperatur</div>
+        <div class="detail-tile-val">${wt}</div>
+      </div>
+      <div class="detail-tile">
+        <div class="detail-tile-icon">🌤</div>
+        <div class="detail-tile-label">Lufttemperatur</div>
+        <div class="detail-tile-val">${at}</div>
+      </div>
+      <div class="detail-tile" style="grid-column:1/-1">
+        <div class="detail-tile-icon">🔬</div>
+        <div class="detail-tile-label">Algblomning</div>
+        <div class="detail-tile-val" style="font-size:20px;font-family:var(--font-sans);color:${algColor}">${alg}</div>
+      </div>`;
+
+    // Classification
+    const cw = document.getElementById('detail-classification-wrap');
+    if (p.classification) {
+      const ratingLabels = ['','Utmärkt','Bra kvalitet','Tillfredsställande','Dålig kvalitet'];
+      cw.innerHTML = `
+        <div class="detail-classification">
+          <div>
+            <div class="detail-class-label">EU-klassificering ${p.classification.classificationYear}</div>
+            <div class="detail-class-val">${ratingLabels[p.classification.rating] || '–'}</div>
+          </div>
+          ${p.euType ? '<span style="font-size:12px;background:var(--ocean-light);color:var(--ocean);padding:4px 10px;border-radius:99px;font-weight:600">EU Badvatten</span>' : ''}
+        </div>`;
+    } else { cw.innerHTML = ''; }
+
+    // About
+    const aboutTitle = document.getElementById('detail-about-title');
+    const aboutEl = document.getElementById('detail-about');
+    if (p.description) {
+      aboutTitle.style.display = '';
+      aboutEl.textContent = p.description;
+    } else {
+      aboutTitle.style.display = 'none';
+      aboutEl.textContent = '';
     }
-    favs.push({ ...b, _profile: b._profile || null });
+    // Sample date
+    document.getElementById('detail-sample-date').innerHTML =
+      p.sampleDate ? `📅 Senaste prov: ${p.sampleDate}` : '';
   }
-  saveFavs();
-  renderFavGrid();
-  // re-render nearby cards to update star
-  nearbyAll.slice(0, nearbyShown).forEach(nb => {
-    const el = document.getElementById('bc-' + nb.NUTSKOD);
-    if (el) { el.innerHTML = beachCardHTML(nb, nb._profile||null); el.onclick = () => toggleFav(nb); }
-  });
 }
 
-function renderFavGrid() {
-  const grid = document.getElementById('fav-grid');
-  const slots = [];
-  for (let i=0; i<4; i++) {
-    const f = favs[i];
-    if (f) slots.push(favCardHTML(f, i));
-    else slots.push(emptyFavHTML(i));
-  }
-  grid.innerHTML = slots.join('');
+function closeDetail() {
+  document.getElementById('screen-detail').classList.add('hidden');
+  currentDetail = null;
 }
 
-function favCardHTML(f, idx) {
-  const p = f._profile || null;
-  const emoji = statusEmoji(p);
-  const temp = p && p.waterTemp != null ? `${p.waterTemp.toFixed(1)}` : null;
-  const { cls, label } = p ? statusBadge(p) : {cls:'badge-unk',label:'–'};
-  const dateStr = p && p.sampleDate ? `Prov ${p.sampleDate}` : '';
-  const distStr = (userLat!==null && f.lat) ? fmtDist(haversine(userLat,userLon,f.lat,f.lon)) : '';
-  return `
-  <div class="fav-card" onclick="">
-    <button class="fav-remove" onclick="event.stopPropagation();removeFav(${idx})">×</button>
-    <div class="fav-top">
-      <div>
-        <div class="fav-name">${f.NAMN}</div>
-        <div class="fav-mun">${f.KMN_NAMN}${distStr?' · '+distStr:''}</div>
-      </div>
-      <div class="fav-emoji">${emoji}</div>
-    </div>
-    ${temp
-      ? `<div class="fav-temp">${temp}<span>°</span></div>`
-      : `<div class="fav-loading"><span class="spin"></span> hämtar</div>`}
-    <span class="fav-status badge ${cls}">${label}</span>
-    <div class="fav-date">${dateStr}</div>
-  </div>`;
+function toggleFavDetail() {
+  if (!currentDetail) return;
+  toggleFav(currentDetail.id);
+  document.getElementById('detail-fav-btn').textContent = favIds.includes(currentDetail.id) ? '💙' : '🤍';
 }
 
-function emptyFavHTML(idx) {
-  return `<div class="fav-card empty" onclick="openSheet()">
-    <div class="plus">+</div>
-    <div>Lägg till favorit</div>
-  </div>`;
+// ══════════════════════════ FAVORITES
+function loadFavIds() {
+  try { favIds = JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { favIds = []; }
+}
+function saveFavIds() { localStorage.setItem(FAV_KEY, JSON.stringify(favIds)); }
+
+function toggleFav(id) {
+  const idx = favIds.indexOf(id);
+  if (idx >= 0) favIds.splice(idx, 1);
+  else favIds.push(id);
+  saveFavIds();
+  refreshCard(allBeaches.find(b=>b.id===id));
+  updateFavsScreen();
+  updateFavChips();
 }
 
-function removeFav(idx) {
-  favs.splice(idx, 1);
-  saveFavs();
-  renderFavGrid();
-}
-
-// ─── REFRESH ALL ─────────────────────────────────────────────────────────────
-async function refreshAll() {
-  const icon = document.querySelector('.hdr-refresh');
-  icon.style.animation = 'spin 0.7s linear infinite';
-  // Refresh favs
-  await Promise.all(favs.map(async (f,i) => {
-    favs[i]._profile = await fetchProfile(f.NUTSKOD);
-  }));
-  saveFavs();
-  renderFavGrid();
-  // Refresh shown nearby
-  const shown = nearbyAll.slice(0, nearbyShown);
-  await Promise.all(shown.map(async b => {
-    b._profile = await fetchProfile(b.NUTSKOD);
-    const el = document.getElementById('bc-' + b.NUTSKOD);
-    if (el) { el.innerHTML = beachCardHTML(b, b._profile); el.onclick = () => toggleFav(b); }
-  }));
-  icon.style.animation = '';
-  const now = new Date();
-  document.getElementById('last-upd').textContent =
-    `Uppdaterad ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-}
-
-// ─── SEARCH SHEET ────────────────────────────────────────────────────────────
-function openSheet() {
-  document.getElementById('overlay').style.display = 'block';
-  const sh = document.getElementById('sheet');
-  sh.style.display = 'flex';
-  document.getElementById('sheet-input').value = '';
-  document.getElementById('sheet-results').innerHTML =
-    '<div style="padding:20px;text-align:center;color:var(--muted);font-size:14px;">Sök efter en badplats att lägga till som favorit</div>';
-  setTimeout(()=>document.getElementById('sheet-input').focus(), 100);
-}
-function closeSheet() {
-  document.getElementById('overlay').style.display = 'none';
-  document.getElementById('sheet').style.display = 'none';
-}
-
-function doSearch() {
-  const q = document.getElementById('sheet-input').value.toLowerCase().trim();
-  if (!q) return;
-  const results = allBeaches.filter(b =>
-    b.NAMN.toLowerCase().includes(q) || b.KMN_NAMN.toLowerCase().includes(q)
-  ).slice(0, 30);
-
-  if (userLat !== null) {
-    results.forEach(b => { b.dist = haversine(userLat,userLon,b.lat,b.lon); });
-    results.sort((a,b) => a.dist - b.dist);
-  }
-
-  const el = document.getElementById('sheet-results');
-  if (!results.length) {
-    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:14px;">Inga resultat</div>';
-    return;
-  }
-  el.innerHTML = results.map(b => {
-    const dist = b.dist != null ? `<span class="sheet-item-dist">${fmtDist(b.dist)}</span>` : '';
-    const isFav = favs.some(f=>f.NUTSKOD===b.NUTSKOD);
-    return `<div class="sheet-item" onclick="addFavFromSearch('${b.NUTSKOD}')">
-      <div>
-        <div class="sheet-item-name">${b.NAMN} ${isFav?'⭐':''}</div>
-        <div class="sheet-item-mun">${b.KMN_NAMN}</div>
-      </div>
-      ${dist}
+function updateFavChips() {
+  const chips = document.getElementById('fav-chips');
+  const favBeaches = favIds.map(id => allBeaches.find(b=>b.id===id)).filter(Boolean);
+  if (!favBeaches.length) { chips.innerHTML = ''; return; }
+  chips.innerHTML = favBeaches.map(b => {
+    const si = getStatusInfo(b.profile);
+    const temp = b.profile?.waterTemp != null ? `${b.profile.waterTemp.toFixed(1)}°C` : '–';
+    return `<div class="fav-chip" onclick="showScreen('favs',document.querySelectorAll('.nav-btn')[2])">
+      <div class="fav-chip-dot ${si.dot}"></div>
+      <div class="fav-chip-name">${b.name}</div>
+      <div class="fav-chip-temp">${temp}</div>
     </div>`;
   }).join('');
 }
 
-async function addFavFromSearch(nutskod) {
-  const b = allBeaches.find(x=>x.NUTSKOD===nutskod);
-  if (!b) return;
-  const existing = favs.findIndex(f=>f.NUTSKOD===nutskod);
-  if (existing>=0) { closeSheet(); return; }
-  if (favs.length >= 4) { alert('Max 4 favoriter. Ta bort en befintlig först.'); return; }
-  b.dist = userLat!==null ? haversine(userLat,userLon,b.lat,b.lon) : null;
-  favs.push({ ...b, _profile: null });
-  saveFavs();
-  renderFavGrid();
-  closeSheet();
-  // Fetch profile
-  const idx = favs.findIndex(f=>f.NUTSKOD===nutskod);
-  favs[idx]._profile = await fetchProfile(nutskod);
-  saveFavs();
-  renderFavGrid();
+function updateFavsScreen() {
+  const favBeaches = favIds.map(id => allBeaches.find(b=>b.id===id)).filter(Boolean);
+  const countEl = document.getElementById('fav-count');
+  const listEl = document.getElementById('fav-list');
+  const navBtn = document.querySelectorAll('.nav-btn')[2];
+
+  countEl.textContent = favBeaches.length ? `${favBeaches.length} favorit${favBeaches.length>1?'er':''}` : '';
+
+  if (!favBeaches.length) {
+    listEl.innerHTML = `<div class="fav-empty"><div class="fav-empty-icon">🤍</div><p>Inga favoriter ännu.<br>Tryck på 🤍 på ett badkort för att spara.</p></div>`;
+    navBtn.querySelector('.nav-icon').textContent = '🤍';
+    return;
+  }
+  navBtn.querySelector('.nav-icon').textContent = '💙';
+  listEl.innerHTML = '';
+  favBeaches.forEach(b => {
+    const el = document.createElement('div');
+    el.className = 'bcard';
+    el.innerHTML = bcardHTML(b);
+    el.onclick = () => openDetail(b);
+    listEl.appendChild(el);
+    if (!b.profile) fetchAndUpdateCard(b);
+  });
 }
 
-document.getElementById('sheet-input').addEventListener('keydown', e => {
-  if (e.key==='Enter') doSearch();
-});
+// ══════════════════════════ MAP
+function initMap() {
+  if (mapInitialized) return;
+  mapInitialized = true;
+  document.getElementById('map-placeholder').style.display = 'none';
+  leafletMap = L.map('map', { zoomControl: true }).setView([62.5, 16], 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO', maxZoom: 19
+  }).addTo(leafletMap);
+
+  const shown = allBeaches.slice(0, 500); // limit markers for perf
+  shown.forEach(b => {
+    const si = getStatusInfo(b.profile);
+    const colors = { ok:'#3a8a50', warn:'#d4880a', bad:'#c0392b', unk:'#aaa' };
+    const color = colors[si.key];
+    const marker = L.circleMarker([b.lat, b.lon], {
+      radius: 7, fillColor: color, color: '#fff', weight: 1.5, fillOpacity: 0.9
+    }).addTo(leafletMap);
+    marker.bindPopup(`<b>${b.name}</b><br>${b.municipality}`);
+    marker.on('click', () => openDetail(b));
+  });
+
+  if (userLat !== null) leafletMap.setView([userLat, userLon], 10);
+}
+
+// ══════════════════════════ NAV
+function showScreen(name, btn) {
+  document.querySelectorAll('.screen').forEach(s => {
+    if (s.id !== 'screen-detail') s.classList.add('hidden');
+  });
+  document.getElementById('screen-' + name).classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (name === 'map') { setTimeout(initMap, 50); }
+  if (name === 'favs') { updateFavsScreen(); updateFavChips(); }
+}
 </script>
 </body>
 </html>
