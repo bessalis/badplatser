@@ -508,10 +508,13 @@ function renderNextBatch() {
 }
 
 function loadMore() {
-  shownCount -= PAGE_SIZE; // will be re-added in renderNextBatch... actually just call:
   let visible = sortedBeaches;
   if (activeFilter !== 'all') {
     visible = sortedBeaches.filter(b => b.profile && getStatusInfo(b.profile).key === activeFilter);
+  }
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    visible = visible.filter(b => b.name.toLowerCase().includes(q) || b.municipality.toLowerCase().includes(q));
   }
   const batch = visible.slice(shownCount, shownCount + PAGE_SIZE);
   shownCount += batch.length;
