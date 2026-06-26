@@ -1010,5 +1010,26 @@ function showScreen(name, btn) {
   if (name === 'favs') { updateFavsScreen(); updateFavChips(); }
 }
 </script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/badplatser/sw.js').then(reg => {
+    // Check for updates every time app loads
+    reg.update();
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      newSW.addEventListener('statechange', () => {
+        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+          // New version ready – reload silently
+          navigator.serviceWorker.controller.postMessage('skipWaiting');
+          window.location.reload();
+        }
+      });
+    });
+  });
+  // Reload when new SW takes over
+  navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
+}
+</script>
 </body>
 </html>
