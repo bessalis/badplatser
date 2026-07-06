@@ -54,6 +54,7 @@ body {
 
 /* ── SCREENS ── */
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--sand); transition: transform 0.32s cubic-bezier(.4,0,.2,1), opacity 0.32s; }
+#screen-detail { z-index: 500; }
 .screen.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
 .screen.slide-up { transform: translateY(100%); opacity: 0; pointer-events: none; }
 
@@ -669,7 +670,7 @@ document.getElementById('search-input').addEventListener('input', e => {
 function openDetail(b) {
   currentDetail = b;
   // Remember which screen we came from
-  const active = document.querySelector('.screen:not(.hidden)');
+  const active = document.querySelector('.screen:not(.hidden):not(#screen-detail)');
   if (active) previousScreen = active.id.replace('screen-', '');
 
   document.getElementById('detail-hero-img').className = 'detail-hero-img ' + b.bgClass;
@@ -678,9 +679,7 @@ function openDetail(b) {
   document.getElementById('detail-loc').innerHTML = `📍 ${b.municipality}${dist}`;
   document.getElementById('detail-fav-btn').textContent = favIds.includes(b.id) ? '💙' : '🤍';
   renderDetail(b);
-  // Show detail on top – don't hide other screens so map stays alive underneath
   document.getElementById('screen-detail').classList.remove('hidden');
-  document.getElementById('screen-detail').style.zIndex = 15;
   if (b.profile === null) fetchAndUpdateCard(b);
 }
 
@@ -819,22 +818,19 @@ function renderDetail(b) {
 
 function closeDetail() {
   document.getElementById('screen-detail').classList.add('hidden');
-  document.getElementById('screen-detail').style.zIndex = '';
   currentDetail = null;
-  // Make sure the right screen is visible
+  // Restore previous screen
+  document.querySelectorAll('.screen').forEach(s => {
+    if (s.id !== 'screen-detail') s.classList.add('hidden');
+  });
   const prev = document.getElementById('screen-' + previousScreen);
-  if (prev) {
-    document.querySelectorAll('.screen').forEach(s => {
-      if (s.id !== 'screen-detail') s.classList.add('hidden');
-    });
-    prev.classList.remove('hidden');
-    // Sync nav highlight
-    const navMap = { search: 0, map: 1, favs: 2 };
-    const idx = navMap[previousScreen] ?? 0;
-    document.querySelectorAll('.nav-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
-    // Re-trigger map resize in case it got confused
-    if (previousScreen === 'map' && leafletMap) setTimeout(() => leafletMap.invalidateSize(), 50);
-  }
+  if (prev) prev.classList.remove('hidden');
+  // Sync nav
+  const navMap = { search: 0, map: 1, favs: 2 };
+  const idx = navMap[previousScreen] ?? 0;
+  document.querySelectorAll('.nav-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  // Leaflet needs a kick after being hidden
+  if (previousScreen === 'map' && leafletMap) setTimeout(() => leafletMap.invalidateSize(), 100);
 }
 
 function toggleFavDetail() {
