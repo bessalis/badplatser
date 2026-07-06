@@ -459,201 +459,160 @@ function seededRand(seed) {
 }
 
 function generateLandscape(b) {
-  const lat = b.lat, lon = b.lon;
-  const id = b.id;
+  const lat = b.lat, lon = b.lon, id = b.id;
   const rand = seededRand(Math.abs(hashStr(id)));
   const W = 400, H = 160;
 
-  // ── Determine scene type from coordinates
-  // Coastal: west coast lon < 13 OR south coast lat < 56.5
-  // Archipelago: east coast 17 < lon < 20, lat 58–60
-  // Northern: lat > 63
-  const isCoast   = lon < 13.5 || lat < 56.5 || (lon > 10 && lon < 13 && lat < 58);
-  const isArchipelago = lon > 16.5 && lon < 21 && lat > 57.5 && lat < 61;
-  const isNorth   = lat > 63;
-  const isLake    = !isCoast && !isArchipelago;
+  // Scene classification
+  const isWestCoast    = lon < 13.5 && lat < 59;
+  const isArchipelago  = lon > 16 && lon < 21 && lat > 57.5 && lat < 61;
+  const isNorth        = lat > 63;
+  const isMidSweden    = !isWestCoast && !isArchipelago && !isNorth && lat > 58;
+  // default: inland lake south/generic
 
-  // ── Sky color based on latitude (warm south → cool/golden north)
-  const skyHue = isNorth ? 35 : isCoast ? 205 : 195;
-  const skySat = isNorth ? 40 : isCoast ? 55 : 45;
-  const skyLit = isNorth ? 82 : 85 - (lat - 55) * 0.5;
-  const skyColor = `hsl(${skyHue},${skySat}%,${Math.round(skyLit)}%)`;
+  // Palette
+  const bg   = isNorth ? '#1a2240' : isArchipelago ? '#dde8e0' : isWestCoast ? '#e8dfc8' : '#e4ead8';
+  const ink  = isNorth ? '#e8dfc8' : '#1a2240';
+  const inkOp = (o) => isNorth ? `rgba(232,223,200,${o})` : `rgba(26,34,64,${o})`;
 
-  // ── Water color from longitude
-  const waterHue = isCoast ? 200 + (lon - 10) * 2 : 195 + (lon - 14) * 1.5;
-  const waterSat = isCoast ? 55 : 45;
-  const waterLit = isCoast ? 48 : 52;
-  const waterColor  = `hsl(${Math.round(waterHue)},${waterSat}%,${waterLit}%)`;
-  const waterColor2 = `hsl(${Math.round(waterHue+5)},${waterSat-5}%,${waterLit-8}%)`;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">`;
+  s += `<rect width="${W}" height="${H}" fill="${bg}"/>`;
 
-  // ── Vegetation color from longitude
-  const vegHue = 100 + (lon - 10) * 2.5;
-  const vegColor  = `hsl(${Math.round(vegHue)},45%,30%)`;
-  const vegColor2 = `hsl(${Math.round(vegHue+8)},38%,38%)`;
-
-  const uid = id.replace(/[^a-z0-9]/gi,'');
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">`;
-
-  // Sky
-  svg += `<rect width="${W}" height="${H}" fill="${skyColor}"/>`;
-
-  // Clouds (seeded)
-  const nClouds = 2 + Math.floor(rand() * 3);
-  for (let i = 0; i < nClouds; i++) {
-    const cx = 20 + rand() * (W - 60), cy = 10 + rand() * 30;
-    const r1 = 18 + rand() * 20, r2 = 12 + rand() * 14;
-    const alpha = 0.55 + rand() * 0.3;
-    svg += `<g opacity="${alpha.toFixed(2)}">
-      <ellipse cx="${cx.toFixed(0)}" cy="${cy.toFixed(0)}" rx="${r1.toFixed(0)}" ry="${(r1*0.55).toFixed(0)}" fill="white"/>
-      <ellipse cx="${(cx+r1*0.5).toFixed(0)}" cy="${(cy+3).toFixed(0)}" rx="${r2.toFixed(0)}" ry="${(r2*0.5).toFixed(0)}" fill="white"/>
-      <ellipse cx="${(cx-r1*0.4).toFixed(0)}" cy="${(cy+4).toFixed(0)}" rx="${(r2*0.8).toFixed(0)}" ry="${(r2*0.45).toFixed(0)}" fill="white"/>
-    </g>`;
-  }
-
-  // Northern sun/glow
-  if (isNorth) {
-    const sx = 60 + rand() * 250, sy = 18 + rand() * 25;
-    svg += `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="22" fill="#f5e060" opacity="0.35"/>`;
-    svg += `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="13" fill="#f8e878" opacity="0.55"/>`;
-  }
-
-  const horizonY = isCoast ? 90 : 95;
-
-  if (isCoast) {
-    // ── COASTAL: waves + sand
-    svg += `<rect x="0" y="${horizonY}" width="${W}" height="${H-horizonY}" fill="${waterColor}"/>`;
-    // Wave layers
-    for (let w = 0; w < 3; w++) {
-      const wy = horizonY + w*12 + rand()*6;
-      let path = `M0,${wy.toFixed(0)}`;
-      for (let x = 0; x <= W; x += 40) {
-        const cy1 = wy - 6 - rand()*8, cx1 = x+10+rand()*10;
-        const cy2 = wy + 4 + rand()*6, cx2 = x+30+rand()*10;
-        path += ` C${cx1.toFixed(0)},${cy1.toFixed(0)} ${cx2.toFixed(0)},${cy2.toFixed(0)} ${Math.min(x+40,W).toFixed(0)},${wy.toFixed(0)}`;
-      }
-      path += ` L${W},${H} L0,${H}Z`;
-      const wAlpha = 0.3 + w * 0.25;
-      svg += `<path d="${path}" fill="${waterColor2}" opacity="${wAlpha.toFixed(2)}"/>`;
+  // Wave helper: returns a filled+stroked wave band with n contour lines
+  function waveBand(yBase, amp, fill, nLines, lineStroke, lineSW, flip) {
+    // Main shape
+    let d = `M0,${yBase}`;
+    const step = 35;
+    for (let x = 0; x <= W; x += step) {
+      const r1 = rand(), r2 = rand();
+      const cy1 = yBase - amp*(flip?-1:1)*(0.4 + r1*0.6);
+      const cx1 = x + step*0.3 + r1*step*0.2;
+      const cy2 = yBase + amp*(flip?-1:1)*(0.1 + r2*0.3);
+      const cx2 = x + step*0.7 + r2*step*0.2;
+      d += ` C${cx1.toFixed(1)},${cy1.toFixed(1)} ${cx2.toFixed(1)},${cy2.toFixed(1)} ${Math.min(x+step,W)},${yBase.toFixed(1)}`;
     }
-    // Sand
-    const sandY = H - 35 - rand()*10;
-    svg += `<path d="M0,${sandY.toFixed(0)} Q${(W*0.25).toFixed(0)},${(sandY-8).toFixed(0)} ${(W*0.5).toFixed(0)},${sandY.toFixed(0)} Q${(W*0.75).toFixed(0)},${(sandY+8).toFixed(0)} ${W},${(sandY-4).toFixed(0)} L${W},${H} L0,${H}Z" fill="#d4b896"/>`;
-    svg += `<path d="M0,${(sandY+8).toFixed(0)} Q${(W*0.3).toFixed(0)},${(sandY+2).toFixed(0)} ${(W*0.6).toFixed(0)},${(sandY+10).toFixed(0)} L${W},${(sandY+6).toFixed(0)} L${W},${H} L0,${H}Z" fill="#c8a882" opacity="0.5"/>`;
+    d += ` L${W},${H} L0,${H}Z`;
+    s += `<path d="${d}" fill="${fill}" stroke="${ink}" stroke-width="1.8"/>`;
+    // Contour lines
+    for (let n = 1; n <= nLines; n++) {
+      const t = n / (nLines + 1);
+      const yd = yBase + t * 28;
+      let ld = `M0,${yd.toFixed(1)}`;
+      for (let x = 0; x <= W; x += step) {
+        const r1 = rand()*0.5, r2 = rand()*0.5;
+        const cy1 = yd - amp*0.25*(0.3+r1);
+        const cx1 = x + step*0.3;
+        const cy2 = yd + amp*0.15*(0.2+r2);
+        const cx2 = x + step*0.7;
+        ld += ` C${cx1.toFixed(1)},${cy1.toFixed(1)} ${cx2.toFixed(1)},${cy2.toFixed(1)} ${Math.min(x+step,W).toFixed(1)},${yd.toFixed(1)}`;
+      }
+      const sw = lineSW * (1 - n*0.08);
+      s += `<path d="${ld}" fill="none" stroke="${lineStroke}" stroke-width="${sw.toFixed(2)}"/>`;
+    }
+  }
+
+  if (isWestCoast) {
+    // ── WEST COAST: open sea, long rolling swells, sandy beach
+    // Distant flat sea
+    s += `<rect x="0" y="0" width="${W}" height="72" fill="${isNorth?'#2a3858':'#d4c8a8'}"/>`;
+    s += `<rect x="0" y="72" width="${W}" height="10" fill="${ink}"/>`;
+    // Horizon lines (distant, tight)
+    for (let i=0;i<3;i++) {
+      s += `<path d="M0,${75+i*3} Q${W*0.4},${73+i*3} ${W},${75+i*3}" fill="none" stroke="${bg}" stroke-width="0.9"/>`;
+    }
+    // 3 wave bands – broad westcoast swells
+    waveBand(82, 14, ink, 4, bg, 1.4, false);
+    waveBand(108, 12, ink, 3, bg, 1.3, false);
+    waveBand(132, 10, ink, 3, bg, 1.2, false);
+    // Sandy beach with hatch
+    const sandY = 150;
+    s += `<path d="M0,${sandY} Q${W*0.5},${sandY-6} ${W},${sandY} L${W},${H} L0,${H}Z" fill="#c8aa78"/>`;
+    for (let x=20; x<W; x+=35) {
+      s += `<line x1="${x}" y1="${sandY+2}" x2="${x+8}" y2="${H}" stroke="#b89860" stroke-width="0.8" opacity="0.5"/>`;
+    }
 
   } else if (isArchipelago) {
-    // ── ARCHIPELAGO: rocks + open water + small islands
-    svg += `<rect x="0" y="${horizonY}" width="${W}" height="${H-horizonY}" fill="${waterColor}"/>`;
-    // Distant islands (silhouette)
-    const nIslands = 2 + Math.floor(rand()*3);
-    for (let i = 0; i < nIslands; i++) {
-      const ix = rand()*W, iw = 30+rand()*60, ih = 6+rand()*12;
-      const iy = horizonY - ih + rand()*8;
-      svg += `<ellipse cx="${(ix+iw/2).toFixed(0)}" cy="${(iy+ih/2).toFixed(0)}" rx="${(iw/2).toFixed(0)}" ry="${(ih/2).toFixed(0)}" fill="#6a7060" opacity="0.7"/>`;
-      // Tree on island
-      if (iw > 40) {
-        const tx = ix + iw*0.4 + rand()*iw*0.3;
-        svg += `<polygon points="${tx.toFixed(0)},${(iy).toFixed(0)} ${(tx+6).toFixed(0)},${(iy+14).toFixed(0)} ${(tx-6).toFixed(0)},${(iy+14).toFixed(0)}" fill="${vegColor}" opacity="0.8"/>`;
-      }
+    // ── EAST COAST ARCHIPELAGO: layered islands, rocks, calm water
+    s += `<rect x="0" y="0" width="${W}" height="70" fill="#ccdad0"/>`;
+    // Far island layers
+    s += `<path d="M0,68 Q40,56 80,64 Q120,58 160,62 Q200,52 240,60 Q280,54 ${W},58 L${W},82 L0,82Z" fill="${ink}" opacity="0.45"/>`;
+    s += `<path d="M0,74 Q35,62 75,70 Q115,64 155,68 Q195,58 235,66 Q275,60 ${W},64 L${W},90 L0,90Z" fill="${ink}" opacity="0.7"/>`;
+    // Contour on island
+    s += `<path d="M0,80 Q33,69 73,77 Q113,71 153,75 Q193,65 233,73 Q273,66 ${W},70" fill="none" stroke="${bg}" stroke-width="1"/>`;
+    // Rocks left
+    s += `<path d="M0,118 Q12,98 26,110 Q34,90 48,106 L52,${H} L0,${H}Z" fill="${ink}"/>`;
+    s += `<path d="M4,116 Q14,98 26,108" fill="none" stroke="${bg}" stroke-width="1.1"/>`;
+    s += `<path d="M10,122 Q20,105 32,114" fill="none" stroke="${bg}" stroke-width="0.9"/>`;
+    // Rocks right
+    s += `<path d="M${W-55},115 Q${W-42},94 ${W-28},108 Q${W-18},92 ${W},106 L${W},${H} L${W-58},${H}Z" fill="${ink}"/>`;
+    s += `<path d="M${W-50},113 Q${W-39},94 ${W-27},106" fill="none" stroke="${bg}" stroke-width="1"/>`;
+    // Calm water – tight lines
+    const wy = 90;
+    s += `<path d="M0,${wy} Q${W*0.5},${wy-4} ${W},${wy} L${W},${H} L0,${H}Z" fill="${ink}"/>`;
+    for (let n=0;n<9;n++) {
+      const y = wy+8+n*8;
+      s += `<path d="M0,${y} Q${W*0.3+rand()*40},${y-3} ${W*0.7+rand()*30},${y+2} Q${W*0.85},${y-1} ${W},${y}" fill="none" stroke="${bg}" stroke-width="${(1.2-n*0.08).toFixed(2)}"/>`;
     }
-    // Water shimmer
-    svg += `<path d="M0,${(horizonY+15).toFixed(0)} Q${(W*0.3).toFixed(0)},${(horizonY+8).toFixed(0)} ${(W*0.6).toFixed(0)},${(horizonY+18).toFixed(0)} Q${(W*0.8).toFixed(0)},${(horizonY+24).toFixed(0)} ${W},${(horizonY+12).toFixed(0)} L${W},${H} L0,${H}Z" fill="${waterColor2}" opacity="0.45"/>`;
-    // Foreground rocks
-    const nRocks = 3 + Math.floor(rand()*4);
-    for (let i = 0; i < nRocks; i++) {
-      const rx = rand()*(W+40)-20, rh = 15+rand()*30, rw = 25+rand()*50;
-      const ry = H - rh;
-      svg += `<ellipse cx="${(rx+rw/2).toFixed(0)}" cy="${(ry+rh*0.6).toFixed(0)}" rx="${(rw/2).toFixed(0)}" ry="${(rh/2).toFixed(0)}" fill="#8a8278" opacity="${(0.7+rand()*0.3).toFixed(2)}"/>`;
-    }
+    // Cliff foreground
+    waveBand(136, 8, ink, 2, bg, 1.2, false);
 
   } else if (isNorth) {
-    // ── NORTHERN LAKE: birches + golden sky + still water
-    svg += `<rect x="0" y="${horizonY}" width="${W}" height="${H-horizonY}" fill="${waterColor}"/>`;
-    // Reflection shimmer
-    svg += `<path d="M0,${(horizonY+5).toFixed(0)} Q${(W*0.4).toFixed(0)},${(horizonY-2).toFixed(0)} ${(W*0.8).toFixed(0)},${(horizonY+8).toFixed(0)} L${W},${(horizonY+4).toFixed(0)} L${W},${H} L0,${H}Z" fill="#a8c8d8" opacity="0.4"/>`;
-    // Shore
-    svg += `<rect x="0" y="${(H-28).toFixed(0)}" width="${W}" height="28" fill="#c4b490" opacity="0.9"/>`;
-    // Birches
-    const nBirches = 3 + Math.floor(rand()*4);
-    const positions = [];
-    for (let i = 0; i < nBirches; i++) positions.push(rand());
-    positions.sort();
-    for (let i = 0; i < nBirches; i++) {
-      const bx = 15 + positions[i]*(W-30);
-      const bh = 55 + rand()*40;
+    // ── NORTH: birches on dark, mirror lake
+    s += `<rect x="0" y="0" width="${W}" height="88" fill="#2a3858"/>`;
+    // Birch trunks + foliage – white on dark
+    const bpos = [0.12, 0.28, 0.45, 0.64, 0.80].map(p => p + (rand()-0.5)*0.06);
+    bpos.forEach(p => {
+      const bx = p * W;
+      const bh = 52 + rand()*30;
       const bw = 3 + rand()*2;
-      svg += `<rect x="${(bx-bw/2).toFixed(0)}" y="${(H-28-bh).toFixed(0)}" width="${bw.toFixed(0)}" height="${bh.toFixed(0)}" fill="#e8e4d8" rx="1"/>`;
-      // Birch markings
-      for (let m = 0; m < 4; m++) {
-        const my = H-28-bh + rand()*bh*0.8;
-        svg += `<rect x="${(bx-bw/2-1).toFixed(0)}" y="${my.toFixed(0)}" width="${(bw+2).toFixed(0)}" height="2" fill="#555" opacity="0.3" rx="1"/>`;
+      const fr  = 12 + rand()*10;
+      s += `<rect x="${(bx-bw/2).toFixed(0)}" y="${(88-bh).toFixed(0)}" width="${bw.toFixed(0)}" height="${bh.toFixed(0)}" fill="#e8dfc8" rx="1"/>`;
+      // bark marks
+      for (let m=0;m<4;m++) {
+        const my = (88-bh) + rand()*bh*0.75;
+        s += `<rect x="${(bx-bw/2-1).toFixed(0)}" y="${my.toFixed(0)}" width="${(bw+2).toFixed(0)}" height="2" fill="#1a2240" rx="1" opacity="0.5"/>`;
       }
-      // Foliage
-      const fr = 14 + rand()*10;
-      svg += `<ellipse cx="${bx.toFixed(0)}" cy="${(H-28-bh+fr*0.6).toFixed(0)}" rx="${fr.toFixed(0)}" ry="${(fr*1.2).toFixed(0)}" fill="#8ab870" opacity="${(0.75+rand()*0.2).toFixed(2)}"/>`;
+      s += `<ellipse cx="${bx.toFixed(0)}" cy="${(88-bh+fr*0.6).toFixed(0)}" rx="${fr.toFixed(0)}" ry="${(fr*1.15).toFixed(0)}" fill="#e8dfc8" opacity="${(0.75+rand()*0.2).toFixed(2)}"/>`;
+      // mirror reflection
+      const ry = 96 + rand()*6;
+      s += `<path d="M${(bx-1).toFixed(0)},${ry.toFixed(0)} Q${(bx+3).toFixed(0)},${(ry+15).toFixed(0)} ${(bx-2).toFixed(0)},${(ry+30).toFixed(0)} Q${(bx+2).toFixed(0)},${(ry+45).toFixed(0)} ${(bx-1).toFixed(0)},${(ry+55).toFixed(0)}" fill="none" stroke="#e8dfc8" stroke-width="${(bw*0.6).toFixed(1)}" opacity="0.22"/>`;
+    });
+    // Still water
+    const lakeY = 90;
+    s += `<path d="M0,${lakeY} Q${W*0.5},${lakeY-3} ${W},${lakeY} L${W},${H} L0,${H}Z" fill="#0d1828"/>`;
+    for (let n=0;n<8;n++) {
+      const y = lakeY+7+n*9;
+      s += `<path d="M0,${y} Q${W*0.4},${y-2} ${W*0.8},${y+2} Q${W*0.9},${y} ${W},${y}" fill="none" stroke="#e8dfc8" stroke-width="${(1.1-n*0.08).toFixed(2)}"/>`;
     }
 
   } else {
-    // ── INLAND LAKE: forest + still water
-    svg += `<rect x="0" y="${horizonY}" width="${W}" height="${H-horizonY}" fill="${waterColor}"/>`;
-    svg += `<path d="M0,${(horizonY+8).toFixed(0)} Q${(W*0.35).toFixed(0)},${(horizonY+2).toFixed(0)} ${(W*0.7).toFixed(0)},${(horizonY+12).toFixed(0)} L${W},${(horizonY+6).toFixed(0)} L${W},${H} L0,${H}Z" fill="${waterColor2}" opacity="0.4"/>`;
-    // Shore strip
-    svg += `<rect x="0" y="${(H-24).toFixed(0)}" width="${W}" height="24" fill="#c8b888" opacity="0.85"/>`;
-    // Trees (mix of conifer and deciduous based on lat)
-    const conifer = lat > 59;
-    const nTrees = 5 + Math.floor(rand()*6);
-    const tpos = [];
-    for (let i = 0; i < nTrees; i++) tpos.push(rand());
-    tpos.sort();
-    for (let i = 0; i < nTrees; i++) {
-      const tx = 5 + tpos[i]*(W-10);
-      const th = 40 + rand()*45;
-      const tw = 14 + rand()*10;
-      svg += `<rect x="${(tx-2).toFixed(0)}" y="${(H-24-th+10).toFixed(0)}" width="4" height="${(th-10).toFixed(0)}" fill="#5a3a18" opacity="0.7"/>`;
-      if (conifer || rand() > 0.4) {
-        // Pine/spruce
-        const layers = 3;
-        for (let l = 0; l < layers; l++) {
-          const ly = H-24-th + l*(th*0.28);
-          const lw = tw * (0.5 + l*0.25);
-          svg += `<polygon points="${tx.toFixed(0)},${ly.toFixed(0)} ${(tx+lw).toFixed(0)},${(ly+th*0.3).toFixed(0)} ${(tx-lw).toFixed(0)},${(ly+th*0.3).toFixed(0)}" fill="${vegColor}" opacity="${(0.8+rand()*0.15).toFixed(2)}"/>`;
-        }
-      } else {
-        // Deciduous
-        svg += `<ellipse cx="${tx.toFixed(0)}" cy="${(H-24-th+tw*0.7).toFixed(0)}" rx="${tw.toFixed(0)}" ry="${(tw*0.85).toFixed(0)}" fill="${vegColor2}" opacity="${(0.8+rand()*0.15).toFixed(2)}"/>`;
-      }
-    }
+    // ── INLAND / MID SWEDEN: dense pine forest, lively lake
+    const treeH = 60 + rand()*20;
+    const baseY = 88;
+    // Pine silhouette – packed triangles
+    const nTrees = 14 + Math.floor(rand()*5);
+    const tpos2 = Array.from({length: nTrees}, () => rand()).sort((a,b) => a-b);
+    tpos2.forEach(p => {
+      const tx = p * W;
+      const th = treeH * (0.7 + rand()*0.5);
+      const tw = 10 + rand()*8;
+      // trunk
+      s += `<rect x="${(tx-1.5).toFixed(0)}" y="${(baseY-th*0.25).toFixed(0)}" width="3" height="${(th*0.3).toFixed(0)}" fill="${ink}" opacity="0.7"/>`;
+      // 3-layer spruce
+      [[0, 0.5],[0.22, 0.7],[0.45, 0.9]].forEach(([ly, lw]) => {
+        const py = baseY - th + th*ly;
+        const pw = tw * lw;
+        s += `<polygon points="${tx.toFixed(0)},${py.toFixed(0)} ${(tx+pw).toFixed(0)},${(py+th*0.28).toFixed(0)} ${(tx-pw).toFixed(0)},${(py+th*0.28).toFixed(0)}" fill="${ink}"/>`;
+      });
+    });
+    // Two lively wave bands
+    waveBand(baseY, 13, ink, 4, bg, 1.5, false);
+    waveBand(118, 11, ink, 4, bg, 1.3, false);
+    waveBand(142, 9, ink, 3, bg, 1.1, false);
   }
 
-  svg += `</svg>`;
-  return svg;
-}
-
-
-// ══════════════════════════ GPS
-function getGPS() {
-  const btn = document.querySelector('#screen-search .icon-btn');
-  btn.textContent = '⏳';
-  navigator.geolocation?.getCurrentPosition(pos => {
-    userLat = pos.coords.latitude;
-    userLon = pos.coords.longitude;
-    btn.textContent = '📍';
-    document.getElementById('search-eyebrow').innerHTML =
-      'IDAG · <span id="today-date"></span>';
-    setTodayDate();
-    buildList();
-  }, () => {
-    btn.textContent = '📍';
-    buildList();
-  }, { timeout: 10000, maximumAge: 60000 });
-}
-
-function haversine(a,b,c,d){
-  const R=6371,dL=(c-a)*Math.PI/180,dO=(d-b)*Math.PI/180;
-  const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)**2;
-  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
-}
-function fmtDist(km) {
-  return km < 1 ? Math.round(km*1000)+' m' : km < 10 ? km.toFixed(1)+' km' : Math.round(km)+' km';
+  s += `</svg>`;
+  return s;
 }
 
 // ══════════════════════════ FILTERING & RENDERING
