@@ -287,7 +287,10 @@ body {
 <nav class="nav">
   <button class="nav-btn active" id="nav-search" onclick="showScreen('search',this)">
     <span class="nav-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="nav-svg-outline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <svg class="nav-svg-filled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
         <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
     </span>
@@ -295,7 +298,6 @@ body {
   </button>
   <button class="nav-btn" id="nav-map" onclick="showScreen('map',this)">
     <span class="nav-icon">
-      <!-- outline by default, filled when active via JS -->
       <svg class="nav-svg-outline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/>
       </svg>
@@ -346,8 +348,8 @@ let beachProfiles = {}; // cache
 (async () => {
   setTodayDate();
   loadFavIds();
+  setActiveNav('search');
   await loadAllBeaches();
-  // If map tab was already open when beaches finished loading, populate it
   if (mapInitialized) addMapMarkers();
   getGPS();
 })();
