@@ -625,6 +625,36 @@ function generateLandscape(b) {
   return s;
 }
 
+// ══════════════════════════ GPS
+function getGPS() {
+  const btn = document.querySelector('#screen-search .icon-btn');
+  if (btn) btn.textContent = '⏳';
+  if (!navigator.geolocation) { if (btn) btn.textContent = '📍'; return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      userLat = pos.coords.latitude;
+      userLon = pos.coords.longitude;
+      if (btn) btn.textContent = '📍';
+      const sub = document.getElementById('hdr-sub');
+      if (sub) sub.textContent = 'Sorterat efter avstånd';
+      buildList();
+      if (leafletMap) leafletMap.setView([userLat, userLon], 10);
+    },
+    () => { if (btn) btn.textContent = '📍'; },
+    { timeout: 10000, maximumAge: 60000 }
+  );
+}
+
+function haversine(a, b, c, d) {
+  const R = 6371, dL = (c-a)*Math.PI/180, dO = (d-b)*Math.PI/180;
+  const x = Math.sin(dL/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+
+function fmtDist(km) {
+  return km < 1 ? Math.round(km*1000)+' m' : km < 10 ? km.toFixed(1)+' km' : Math.round(km)+' km';
+}
+
 // ══════════════════════════ FILTERING & RENDERING
 function buildList() {
   let list = [...allBeaches];
