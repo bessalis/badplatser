@@ -349,9 +349,29 @@ let beachProfiles = {}; // cache
   setTodayDate();
   loadFavIds();
   setActiveNav('search');
-  await loadAllBeaches();
+
+  // Start GPS immediately, don't wait for beaches
+  const gpsPromise = new Promise(resolve => {
+    const btn = document.querySelector('#screen-search .icon-btn');
+    if (btn) btn.textContent = '⏳';
+    navigator.geolocation?.getCurrentPosition(
+      pos => {
+        userLat = pos.coords.latitude;
+        userLon = pos.coords.longitude;
+        if (btn) btn.textContent = '📍';
+        const sub = document.getElementById('hdr-sub');
+        if (sub) sub.textContent = 'Sorterat efter avstånd';
+        resolve(true);
+      },
+      () => { if (btn) btn.textContent = '📍'; resolve(false); },
+      { timeout: 8000, maximumAge: 60000 }
+    );
+  });
+
+  // Load beaches and GPS in parallel
+  await Promise.all([loadAllBeaches(), gpsPromise]);
   if (mapInitialized) addMapMarkers();
-  getGPS();
+  buildList();
 })();
 
 function setTodayDate() {
