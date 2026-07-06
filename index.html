@@ -669,9 +669,12 @@ document.getElementById('search-input').addEventListener('input', e => {
 // ══════════════════════════ DETAIL
 function openDetail(b) {
   currentDetail = b;
-  // Remember which screen we came from
-  const active = document.querySelector('.screen:not(.hidden):not(#screen-detail)');
-  if (active) previousScreen = active.id.replace('screen-', '');
+  // Find which screen is currently visible (excluding detail itself)
+  const screens = ['search','map','favs'];
+  for (const name of screens) {
+    const el = document.getElementById('screen-' + name);
+    if (el && !el.classList.contains('hidden')) { previousScreen = name; break; }
+  }
 
   document.getElementById('detail-hero-img').className = 'detail-hero-img ' + b.bgClass;
   document.getElementById('detail-name').textContent = b.name;
