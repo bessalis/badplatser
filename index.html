@@ -463,152 +463,198 @@ function generateLandscape(b) {
   const rand = seededRand(Math.abs(hashStr(id)));
   const W = 400, H = 160;
 
-  // Scene classification
-  const isWestCoast    = lon < 13.5 && lat < 59;
-  const isArchipelago  = lon > 16 && lon < 21 && lat > 57.5 && lat < 61;
-  const isNorth        = lat > 63;
-  const isMidSweden    = !isWestCoast && !isArchipelago && !isNorth && lat > 58;
-  // default: inland lake south/generic
+  // ── Per-beach unique seeds from coordinates
+  const latFrac  = (lat  % 1);          // 0–1, unique per ~111km band
+  const lonFrac  = (lon  % 1);          // 0–1
+  const idHash   = Math.abs(hashStr(id)) / 2147483647; // 0–1
+  const seed2    = seededRand(Math.abs(hashStr(id + 'x')));
 
-  // Palette
-  const bg   = isNorth ? '#1a2240' : isArchipelago ? '#dde8e0' : isWestCoast ? '#e8dfc8' : '#e4ead8';
-  const ink  = isNorth ? '#e8dfc8' : '#1a2240';
-  const inkOp = (o) => isNorth ? `rgba(232,223,200,${o})` : `rgba(26,34,64,${o})`;
+  // Variation params (all 0–1)
+  const horizonShift = latFrac * 0.6 + lonFrac * 0.4;  // horisontläge
+  const waveAmp      = 0.4 + idHash * 0.6;              // vågamplitud
+  const colorShift   = (lonFrac * 0.7 + latFrac * 0.3); // färgton
+  const density      = 0.3 + seed2() * 0.7;             // trätäthet/vågantal
+  const calm         = seed2();                          // hur lugnt vattnet är
+
+  // Scene classification
+  const isWestCoast   = lon < 13.5 && lat < 59;
+  const isArchipelago = lon > 16 && lon < 21 && lat > 57.5 && lat < 61;
+  const isNorth       = lat > 63;
+
+  // ── Palette with per-beach color variation
+  // Each scene has a base hue, shifted slightly per beach
+  let bgColor, inkColor, skyColor, waterColor, accentColor;
+
+  if (isNorth) {
+    bgColor    = '#1a2240';
+    inkColor   = '#e8dfc8';
+    skyColor   = `hsl(${220 + colorShift*20},${35+colorShift*15}%,${22+colorShift*8}%)`;
+    waterColor = `hsl(${210 + colorShift*15},${40+colorShift*10}%,${10+colorShift*6}%)`;
+  } else if (isWestCoast) {
+    bgColor    = `hsl(${42 + colorShift*12},${38+colorShift*10}%,${86+colorShift*5}%)`;
+    inkColor   = '#1a2240';
+    skyColor   = `hsl(${38 + colorShift*14},${30+colorShift*10}%,${78+colorShift*8}%)`;
+    waterColor = inkColor;
+    accentColor= `hsl(${34 + colorShift*18},${40+colorShift*10}%,${62+colorShift*8}%)`;  // sand
+  } else if (isArchipelago) {
+    bgColor    = `hsl(${150 + colorShift*20},${18+colorShift*12}%,${84+colorShift*6}%)`;
+    inkColor   = `hsl(${215 + colorShift*15},${35+colorShift*10}%,${18+colorShift*8}%)`;
+    skyColor   = `hsl(${155 + colorShift*18},${15+colorShift*10}%,${78+colorShift*8}%)`;
+    waterColor = inkColor;
+  } else {
+    // Inland / mid-Sweden
+    bgColor    = `hsl(${85 + colorShift*18},${18+colorShift*12}%,${86+colorShift*5}%)`;
+    inkColor   = `hsl(${220 + colorShift*12},${35+colorShift*10}%,${16+colorShift*8}%)`;
+    skyColor   = bgColor;
+    waterColor = inkColor;
+  }
 
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">`;
-  s += `<rect width="${W}" height="${H}" fill="${bg}"/>`;
+  s += `<rect width="${W}" height="${H}" fill="${bgColor}"/>`;
 
-  // Wave helper: returns a filled+stroked wave band with n contour lines
-  function waveBand(yBase, amp, fill, nLines, lineStroke, lineSW, flip) {
-    // Main shape
+  // Wave band helper
+  function waveBand(yBase, amp, fill, nLines, lineSW) {
     let d = `M0,${yBase}`;
-    const step = 35;
+    const step = 30 + Math.floor(density * 20);
     for (let x = 0; x <= W; x += step) {
       const r1 = rand(), r2 = rand();
-      const cy1 = yBase - amp*(flip?-1:1)*(0.4 + r1*0.6);
-      const cx1 = x + step*0.3 + r1*step*0.2;
-      const cy2 = yBase + amp*(flip?-1:1)*(0.1 + r2*0.3);
-      const cx2 = x + step*0.7 + r2*step*0.2;
-      d += ` C${cx1.toFixed(1)},${cy1.toFixed(1)} ${cx2.toFixed(1)},${cy2.toFixed(1)} ${Math.min(x+step,W)},${yBase.toFixed(1)}`;
+      const a = amp * (0.5 + r1 * 0.7);
+      d += ` C${(x+step*0.3).toFixed(0)},${(yBase-a).toFixed(0)} ${(x+step*0.7).toFixed(0)},${(yBase+a*0.3).toFixed(0)} ${Math.min(x+step,W)},${yBase.toFixed(0)}`;
     }
     d += ` L${W},${H} L0,${H}Z`;
-    s += `<path d="${d}" fill="${fill}" stroke="${ink}" stroke-width="1.8"/>`;
-    // Contour lines
+    s += `<path d="${d}" fill="${fill}" stroke="${bgColor}" stroke-width="1.6"/>`;
     for (let n = 1; n <= nLines; n++) {
-      const t = n / (nLines + 1);
-      const yd = yBase + t * 28;
-      let ld = `M0,${yd.toFixed(1)}`;
+      const yd = yBase + (n / (nLines+1)) * 26;
+      let ld = `M0,${yd.toFixed(0)}`;
       for (let x = 0; x <= W; x += step) {
-        const r1 = rand()*0.5, r2 = rand()*0.5;
-        const cy1 = yd - amp*0.25*(0.3+r1);
-        const cx1 = x + step*0.3;
-        const cy2 = yd + amp*0.15*(0.2+r2);
-        const cx2 = x + step*0.7;
-        ld += ` C${cx1.toFixed(1)},${cy1.toFixed(1)} ${cx2.toFixed(1)},${cy2.toFixed(1)} ${Math.min(x+step,W).toFixed(1)},${yd.toFixed(1)}`;
+        const r = rand();
+        ld += ` C${(x+step*0.3).toFixed(0)},${(yd - amp*0.2*(0.3+r)).toFixed(0)} ${(x+step*0.7).toFixed(0)},${(yd+amp*0.1).toFixed(0)} ${Math.min(x+step,W)},${yd.toFixed(0)}`;
       }
-      const sw = lineSW * (1 - n*0.08);
-      s += `<path d="${ld}" fill="none" stroke="${lineStroke}" stroke-width="${sw.toFixed(2)}"/>`;
+      s += `<path d="${ld}" fill="none" stroke="${bgColor}" stroke-width="${(lineSW*(1-n*0.07)).toFixed(2)}"/>`;
     }
   }
 
   if (isWestCoast) {
-    // ── WEST COAST: open sea, long rolling swells, sandy beach
-    // Distant flat sea
-    s += `<rect x="0" y="0" width="${W}" height="72" fill="${isNorth?'#2a3858':'#d4c8a8'}"/>`;
-    s += `<rect x="0" y="72" width="${W}" height="10" fill="${ink}"/>`;
-    // Horizon lines (distant, tight)
-    for (let i=0;i<3;i++) {
-      s += `<path d="M0,${75+i*3} Q${W*0.4},${73+i*3} ${W},${75+i*3}" fill="none" stroke="${bg}" stroke-width="0.9"/>`;
+    // Horizon varies per beach (high/low sky)
+    const horizY = Math.round(55 + horizonShift * 30);
+    const waveAmpPx = Math.round(10 + waveAmp * 16);
+    const nWaves = 2 + Math.floor(density * 2);
+
+    s += `<rect x="0" y="0" width="${W}" height="${horizY}" fill="${skyColor}"/>`;
+    // Distant sea
+    s += `<rect x="0" y="${horizY}" width="${W}" height="8" fill="${inkColor}"/>`;
+    for (let i=0;i<3;i++) s += `<path d="M0,${horizY+3+i*2} Q${W*0.5},${horizY+2+i*2} ${W},${horizY+3+i*2}" fill="none" stroke="${bgColor}" stroke-width="0.8"/>`;
+    // Waves with variable amplitude and density
+    for (let w=0; w<nWaves; w++) {
+      const wy = horizY + 8 + w * Math.round((H - horizY - 30) / nWaves);
+      const wa = waveAmpPx * (1 - w * 0.15);
+      const nl = 2 + Math.floor(density * 3);
+      waveBand(wy, wa, inkColor, nl, 1.4 - w*0.1);
     }
-    // 3 wave bands – broad westcoast swells
-    waveBand(82, 14, ink, 4, bg, 1.4, false);
-    waveBand(108, 12, ink, 3, bg, 1.3, false);
-    waveBand(132, 10, ink, 3, bg, 1.2, false);
-    // Sandy beach with hatch
-    const sandY = 150;
-    s += `<path d="M0,${sandY} Q${W*0.5},${sandY-6} ${W},${sandY} L${W},${H} L0,${H}Z" fill="#c8aa78"/>`;
-    for (let x=20; x<W; x+=35) {
-      s += `<line x1="${x}" y1="${sandY+2}" x2="${x+8}" y2="${H}" stroke="#b89860" stroke-width="0.8" opacity="0.5"/>`;
-    }
+    // Sand – hue varies
+    const sandY = H - Math.round(18 + density * 20);
+    s += `<path d="M0,${sandY} Q${W*0.5},${sandY - 5 - calm*6} ${W},${sandY} L${W},${H} L0,${H}Z" fill="${accentColor}"/>`;
+    // Hatch density varies
+    const hStep = Math.round(20 + density * 30);
+    for (let x=hStep/2; x<W; x+=hStep)
+      s += `<line x1="${x.toFixed(0)}" y1="${sandY+2}" x2="${(x+6).toFixed(0)}" y2="${H}" stroke="${bgColor}" stroke-width="0.8" opacity="0.45"/>`;
 
   } else if (isArchipelago) {
-    // ── EAST COAST ARCHIPELAGO: layered islands, rocks, calm water
-    s += `<rect x="0" y="0" width="${W}" height="70" fill="#ccdad0"/>`;
-    // Far island layers
-    s += `<path d="M0,68 Q40,56 80,64 Q120,58 160,62 Q200,52 240,60 Q280,54 ${W},58 L${W},82 L0,82Z" fill="${ink}" opacity="0.45"/>`;
-    s += `<path d="M0,74 Q35,62 75,70 Q115,64 155,68 Q195,58 235,66 Q275,60 ${W},64 L${W},90 L0,90Z" fill="${ink}" opacity="0.7"/>`;
-    // Contour on island
-    s += `<path d="M0,80 Q33,69 73,77 Q113,71 153,75 Q193,65 233,73 Q273,66 ${W},70" fill="none" stroke="${bg}" stroke-width="1"/>`;
-    // Rocks left
-    s += `<path d="M0,118 Q12,98 26,110 Q34,90 48,106 L52,${H} L0,${H}Z" fill="${ink}"/>`;
-    s += `<path d="M4,116 Q14,98 26,108" fill="none" stroke="${bg}" stroke-width="1.1"/>`;
-    s += `<path d="M10,122 Q20,105 32,114" fill="none" stroke="${bg}" stroke-width="0.9"/>`;
-    // Rocks right
-    s += `<path d="M${W-55},115 Q${W-42},94 ${W-28},108 Q${W-18},92 ${W},106 L${W},${H} L${W-58},${H}Z" fill="${ink}"/>`;
-    s += `<path d="M${W-50},113 Q${W-39},94 ${W-27},106" fill="none" stroke="${bg}" stroke-width="1"/>`;
-    // Calm water – tight lines
-    const wy = 90;
-    s += `<path d="M0,${wy} Q${W*0.5},${wy-4} ${W},${wy} L${W},${H} L0,${H}Z" fill="${ink}"/>`;
-    for (let n=0;n<9;n++) {
-      const y = wy+8+n*8;
-      s += `<path d="M0,${y} Q${W*0.3+rand()*40},${y-3} ${W*0.7+rand()*30},${y+2} Q${W*0.85},${y-1} ${W},${y}" fill="none" stroke="${bg}" stroke-width="${(1.2-n*0.08).toFixed(2)}"/>`;
+    const horizY = Math.round(58 + horizonShift * 20);
+    s += `<rect x="0" y="0" width="${W}" height="${horizY}" fill="${skyColor}"/>`;
+    // Island layers – count and opacity vary
+    const nLayers = 2 + Math.floor(density * 2);
+    for (let l=0; l<nLayers; l++) {
+      const ly = horizY - 14 + l * 10;
+      const op = 0.35 + l * 0.25 + colorShift * 0.1;
+      let d = `M0,${ly}`;
+      for (let x=0; x<=W; x+=40) {
+        const r = rand();
+        d += ` Q${x+20},${ly - 12 - r*14 - waveAmp*8} ${x+40},${ly + r*4}`;
+      }
+      d += ` L${W},${H} L0,${H}Z`;
+      s += `<path d="${d}" fill="${inkColor}" opacity="${op.toFixed(2)}"/>`;
+      // contour
+      let cd = `M0,${ly+4}`;
+      for (let x=0; x<=W; x+=40) {
+        const r = rand()*0.5;
+        cd += ` Q${x+20},${ly-4-r*8} ${x+40},${ly+4+r*4}`;
+      }
+      s += `<path d="${cd}" fill="none" stroke="${bgColor}" stroke-width="0.9"/>`;
     }
-    // Cliff foreground
-    waveBand(136, 8, ink, 2, bg, 1.2, false);
+    // Rocks – size and count from density
+    const nRocks = 1 + Math.floor(density * 3);
+    const rockPositions = [0.05, 0.25, 0.72, 0.9].slice(0, nRocks);
+    rockPositions.forEach((p, i) => {
+      const rx = p * W, rh = 22 + waveAmp*20 + rand()*15, rw = 28 + density*20 + rand()*15;
+      s += `<path d="M${rx},${H-rh} Q${rx+rw*0.3},${H-rh-10-rand()*12} ${rx+rw*0.7},${H-rh-4} Q${rx+rw},${H-rh+8} ${rx+rw},${H} L${rx},${H}Z" fill="${inkColor}"/>`;
+      for (let n=1;n<=3;n++) {
+        const rd = n/4;
+        s += `<path d="M${rx+rw*0.1*n},${H-rh+n*4} Q${rx+rw*(0.3+rd*0.2)},${H-rh-8+n*4} ${rx+rw*(0.7+rd*0.1)},${H-rh-2+n*4}" fill="none" stroke="${bgColor}" stroke-width="${(1.1-n*0.15).toFixed(2)}"/>`;
+      }
+    });
+    // Water
+    const waterY = horizY + 2;
+    s += `<path d="M0,${waterY} Q${W*0.5},${waterY-3} ${W},${waterY} L${W},${H} L0,${H}Z" fill="${inkColor}"/>`;
+    const nWaterLines = Math.round(5 + calm * 6);
+    for (let n=0; n<nWaterLines; n++) {
+      const y = waterY + 7 + n * (calm < 0.5 ? 7 : 10);
+      s += `<path d="M0,${y} Q${W*0.4},${y-2+rand()*3} ${W*0.8},${y+2} Q${W*0.9},${y} ${W},${y}" fill="none" stroke="${bgColor}" stroke-width="${(1.2-n*0.07).toFixed(2)}"/>`;
+    }
 
   } else if (isNorth) {
-    // ── NORTH: birches on dark, mirror lake
-    s += `<rect x="0" y="0" width="${W}" height="88" fill="#2a3858"/>`;
-    // Birch trunks + foliage – white on dark
-    const bpos = [0.12, 0.28, 0.45, 0.64, 0.80].map(p => p + (rand()-0.5)*0.06);
-    bpos.forEach(p => {
+    const horizY = Math.round(72 + horizonShift * 16);
+    s += `<rect x="0" y="0" width="${W}" height="${horizY}" fill="${skyColor}"/>`;
+    // Birches – count from density, spacing from lonFrac
+    const nBirches = 3 + Math.floor(density * 4);
+    const base = Array.from({length: nBirches}, (_,i) => (i+0.5)/nBirches + (rand()-0.5)*0.08).sort((a,b)=>a-b);
+    base.forEach(p => {
       const bx = p * W;
-      const bh = 52 + rand()*30;
-      const bw = 3 + rand()*2;
-      const fr  = 12 + rand()*10;
-      s += `<rect x="${(bx-bw/2).toFixed(0)}" y="${(88-bh).toFixed(0)}" width="${bw.toFixed(0)}" height="${bh.toFixed(0)}" fill="#e8dfc8" rx="1"/>`;
-      // bark marks
+      const bh = 45 + waveAmp * 25 + rand() * 15;
+      const bw = 2.5 + rand() * 2;
+      const fr  = 10 + density * 8 + rand() * 6;
+      s += `<rect x="${(bx-bw/2).toFixed(1)}" y="${(horizY-bh).toFixed(0)}" width="${bw.toFixed(1)}" height="${bh.toFixed(0)}" fill="${inkColor}" rx="1"/>`;
       for (let m=0;m<4;m++) {
-        const my = (88-bh) + rand()*bh*0.75;
-        s += `<rect x="${(bx-bw/2-1).toFixed(0)}" y="${my.toFixed(0)}" width="${(bw+2).toFixed(0)}" height="2" fill="#1a2240" rx="1" opacity="0.5"/>`;
+        const my = (horizY-bh) + rand()*bh*0.75;
+        s += `<rect x="${(bx-bw/2-1).toFixed(0)}" y="${my.toFixed(0)}" width="${(bw+2).toFixed(0)}" height="1.5" fill="${bgColor}" rx="1" opacity="0.5"/>`;
       }
-      s += `<ellipse cx="${bx.toFixed(0)}" cy="${(88-bh+fr*0.6).toFixed(0)}" rx="${fr.toFixed(0)}" ry="${(fr*1.15).toFixed(0)}" fill="#e8dfc8" opacity="${(0.75+rand()*0.2).toFixed(2)}"/>`;
-      // mirror reflection
-      const ry = 96 + rand()*6;
-      s += `<path d="M${(bx-1).toFixed(0)},${ry.toFixed(0)} Q${(bx+3).toFixed(0)},${(ry+15).toFixed(0)} ${(bx-2).toFixed(0)},${(ry+30).toFixed(0)} Q${(bx+2).toFixed(0)},${(ry+45).toFixed(0)} ${(bx-1).toFixed(0)},${(ry+55).toFixed(0)}" fill="none" stroke="#e8dfc8" stroke-width="${(bw*0.6).toFixed(1)}" opacity="0.22"/>`;
+      s += `<ellipse cx="${bx.toFixed(0)}" cy="${(horizY-bh+fr*0.6).toFixed(0)}" rx="${fr.toFixed(0)}" ry="${(fr*1.1).toFixed(0)}" fill="${inkColor}" opacity="${(0.7+rand()*0.25).toFixed(2)}"/>`;
+      // Water reflection – waviness from calm
+      const ry = horizY + 5 + rand()*4;
+      const waver = calm < 0.4 ? 3 : 1;
+      s += `<path d="M${(bx-1).toFixed(0)},${ry.toFixed(0)} Q${(bx+waver).toFixed(0)},${(ry+18).toFixed(0)} ${(bx-waver).toFixed(0)},${(ry+36).toFixed(0)} Q${(bx+waver).toFixed(0)},${(ry+50).toFixed(0)} ${(bx).toFixed(0)},${(ry+62).toFixed(0)}" fill="none" stroke="${inkColor}" stroke-width="${(bw*0.55).toFixed(1)}" opacity="0.2"/>`;
     });
-    // Still water
-    const lakeY = 90;
-    s += `<path d="M0,${lakeY} Q${W*0.5},${lakeY-3} ${W},${lakeY} L${W},${H} L0,${H}Z" fill="#0d1828"/>`;
-    for (let n=0;n<8;n++) {
-      const y = lakeY+7+n*9;
-      s += `<path d="M0,${y} Q${W*0.4},${y-2} ${W*0.8},${y+2} Q${W*0.9},${y} ${W},${y}" fill="none" stroke="#e8dfc8" stroke-width="${(1.1-n*0.08).toFixed(2)}"/>`;
+    s += `<path d="M0,${horizY} Q${W*0.5},${horizY-3} ${W},${horizY} L${W},${H} L0,${H}Z" fill="${waterColor}"/>`;
+    const nwl = Math.round(5 + calm * 5);
+    for (let n=0;n<nwl;n++) {
+      const y = horizY + 7 + n * (calm < 0.5 ? 8 : 11);
+      s += `<path d="M0,${y} Q${W*0.4},${y-1+rand()*2} ${W*0.8},${y+1} Q${W*0.9},${y} ${W},${y}" fill="none" stroke="${inkColor}" stroke-width="${(1.0-n*0.07).toFixed(2)}"/>`;
     }
 
   } else {
-    // ── INLAND / MID SWEDEN: dense pine forest, lively lake
-    const treeH = 60 + rand()*20;
-    const baseY = 88;
-    // Pine silhouette – packed triangles
-    const nTrees = 14 + Math.floor(rand()*5);
-    const tpos2 = Array.from({length: nTrees}, () => rand()).sort((a,b) => a-b);
+    // Inland / mid-Sweden – pine forest
+    const horizY = Math.round(65 + horizonShift * 20);
+    const treeH  = Math.round(40 + waveAmp * 30);
+    s += `<rect x="0" y="0" width="${W}" height="${horizY}" fill="${skyColor}"/>`;
+    const nTrees = Math.round(10 + density * 10);
+    const tpos2  = Array.from({length: nTrees}, () => rand()).sort((a,b)=>a-b);
     tpos2.forEach(p => {
       const tx = p * W;
-      const th = treeH * (0.7 + rand()*0.5);
-      const tw = 10 + rand()*8;
-      // trunk
-      s += `<rect x="${(tx-1.5).toFixed(0)}" y="${(baseY-th*0.25).toFixed(0)}" width="3" height="${(th*0.3).toFixed(0)}" fill="${ink}" opacity="0.7"/>`;
-      // 3-layer spruce
-      [[0, 0.5],[0.22, 0.7],[0.45, 0.9]].forEach(([ly, lw]) => {
-        const py = baseY - th + th*ly;
+      const th = treeH * (0.65 + rand() * 0.55);
+      const tw = 8 + density * 8 + rand() * 6;
+      s += `<rect x="${(tx-1.5).toFixed(0)}" y="${(horizY-th*0.22).toFixed(0)}" width="3" height="${(th*0.25).toFixed(0)}" fill="${inkColor}" opacity="0.65"/>`;
+      [[0,0.5],[0.22,0.7],[0.45,0.95]].forEach(([lf,lw]) => {
+        const py = horizY - th + th*lf;
         const pw = tw * lw;
-        s += `<polygon points="${tx.toFixed(0)},${py.toFixed(0)} ${(tx+pw).toFixed(0)},${(py+th*0.28).toFixed(0)} ${(tx-pw).toFixed(0)},${(py+th*0.28).toFixed(0)}" fill="${ink}"/>`;
+        s += `<polygon points="${tx.toFixed(0)},${py.toFixed(0)} ${(tx+pw).toFixed(0)},${(py+th*0.28).toFixed(0)} ${(tx-pw).toFixed(0)},${(py+th*0.28).toFixed(0)}" fill="${inkColor}"/>`;
       });
     });
-    // Two lively wave bands
-    waveBand(baseY, 13, ink, 4, bg, 1.5, false);
-    waveBand(118, 11, ink, 4, bg, 1.3, false);
-    waveBand(142, 9, ink, 3, bg, 1.1, false);
+    const nWaves = 2 + Math.floor(density * 2);
+    for (let w=0; w<nWaves; w++) {
+      const wy = horizY + w * Math.round((H - horizY - 10) / nWaves);
+      const wa = Math.round(8 + waveAmp * 14);
+      waveBand(wy, wa, inkColor, 3 + Math.floor(density*2), 1.4 - w*0.1);
+    }
   }
 
   s += `</svg>`;
