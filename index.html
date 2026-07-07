@@ -54,7 +54,7 @@ body {
 
 /* ── SCREENS ── */
 .screen { position: absolute; inset: 0; bottom: var(--nav-h); display: flex; flex-direction: column; background: var(--sand); transition: transform 0.32s cubic-bezier(.4,0,.2,1), opacity 0.32s; }
-#screen-detail { z-index: 500; }
+#screen-detail { z-index: 500; bottom: var(--nav-h); }
 .screen.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
 .screen.slide-up { transform: translateY(100%); opacity: 0; pointer-events: none; }
 
